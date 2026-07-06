@@ -1,0 +1,2630 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mônaco Residence — Gestão</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+:root {
+  --gold: #C9A84C; --gold-light: #E8D5A3; --gold-dark: #9A7A2E;
+  --black: #0E0E0E; --surface: #1A1A1A; --surface2: #242424; --surface3: #2E2E2E;
+  --text: #F5F0E8; --text-muted: #9A9490; --text-dim: #6A6460;
+  --danger: #E24B4A; --warning: #EF9F27; --success: #1D9E75; --info: #378ADD;
+  --border: rgba(201,168,76,0.15); --border-strong: rgba(201,168,76,0.3);
+  --radius: 8px; --radius-lg: 12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Palatino Linotype',Palatino,Georgia,serif;background:var(--black);color:var(--text);min-height:100vh;}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--black);}
+.login-card{background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-lg);padding:2.5rem;width:360px;}
+.login-logo{text-align:center;margin-bottom:2rem;}
+.login-logo-name{font-size:22px;font-weight:700;letter-spacing:0.15em;color:var(--gold);text-transform:uppercase;}
+.login-logo-sub{font-size:10px;letter-spacing:0.25em;color:var(--text-muted);text-transform:uppercase;font-family:Arial,sans-serif;margin-top:4px;}
+.login-divider{height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:1.5rem 0;opacity:0.4;}
+.form-group{margin-bottom:1rem;}
+.form-label{font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;display:block;}
+.form-input{width:100%;background:var(--surface2);border:0.5px solid var(--border-strong);border-radius:var(--radius);padding:10px 12px;color:var(--text);font-size:13px;font-family:Arial,sans-serif;outline:none;transition:border-color 0.15s;}
+.form-input:focus{border-color:var(--gold);}
+.form-input::placeholder{color:var(--text-dim);}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:transparent;color:var(--gold);font-size:13px;cursor:pointer;font-family:Arial,sans-serif;transition:all 0.15s;}
+.btn:hover{background:rgba(201,168,76,0.1);}
+.btn-primary{background:var(--gold);color:var(--black);border-color:var(--gold);font-weight:600;}
+.btn-primary:hover{background:var(--gold-light);}
+.btn-block{width:100%;justify-content:center;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-danger{color:var(--danger);border-color:rgba(226,75,74,0.3);}
+.btn-danger:hover{background:rgba(226,75,74,0.1);}
+.login-error{font-size:12px;color:var(--danger);font-family:Arial,sans-serif;margin-top:0.5rem;display:none;}
+
+/* APP */
+#appScreen{display:none;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:56px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.logo{display:flex;flex-direction:column;cursor:pointer;}
+.logo-name{font-size:14px;font-weight:700;letter-spacing:0.12em;color:var(--gold);text-transform:uppercase;}
+.logo-sub{font-size:8px;letter-spacing:0.2em;color:var(--text-muted);text-transform:uppercase;font-family:Arial,sans-serif;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-search{display:flex;align-items:center;gap:8px;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 12px;}
+.topbar-search input{background:none;border:none;color:var(--text);font-size:13px;font-family:Arial,sans-serif;outline:none;width:200px;}
+.topbar-search input::placeholder{color:var(--text-dim);}
+.icon-btn{width:36px;height:36px;border-radius:var(--radius);background:transparent;border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:18px;transition:all 0.15s;position:relative;}
+.icon-btn:hover,.icon-btn.active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,0.06);}
+.notif-dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--danger);border:1.5px solid var(--surface);}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;border:0.5px solid var(--border);border-radius:20px;cursor:pointer;transition:all 0.15s;}
+.user-chip:hover{border-color:var(--border-strong);}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--gold-dark);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--gold-light);font-family:Arial,sans-serif;}
+.user-name{font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;}
+
+/* ALERTS PANEL */
+.alerts-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;display:none;}
+.alerts-overlay.open{display:block;}
+.alerts-panel{position:fixed;top:0;right:0;width:380px;height:100vh;background:var(--surface);border-left:1px solid var(--border-strong);z-index:301;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.25s ease;}
+.alerts-panel.open{transform:translateX(0);}
+.alerts-panel-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);}
+.alerts-panel-title{font-size:16px;color:var(--gold);}
+.alerts-close{width:32px;height:32px;border-radius:var(--radius);background:transparent;border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);font-size:18px;}
+.alerts-close:hover{color:var(--text);}
+.alerts-body{flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1rem;}
+.alert-section-title{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);font-family:Arial,sans-serif;margin-bottom:0.5rem;}
+.alert-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--surface2);border-radius:var(--radius);border:0.5px solid var(--border);margin-bottom:6px;}
+.alert-item-left{display:flex;align-items:center;gap:10px;}
+.alert-item-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.ai-danger{background:rgba(226,75,74,0.12);color:var(--danger);}
+.ai-warn{background:rgba(239,159,39,0.12);color:var(--warning);}
+.alert-item-text{font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;line-height:1.4;}
+.alert-item-text strong{color:var(--text);font-weight:500;}
+.alert-tag{font-size:10px;padding:3px 8px;border-radius:4px;font-weight:500;white-space:nowrap;font-family:Arial,sans-serif;}
+.tag-danger{background:rgba(226,75,74,0.15);color:var(--danger);}
+.tag-warn{background:rgba(239,159,39,0.15);color:var(--warning);}
+.alerts-footer{padding:1rem 1.5rem;border-top:1px solid var(--border);}
+.alerts-updated{font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;text-align:center;}
+
+/* LAYOUT */
+.layout{display:flex;min-height:calc(100vh - 56px);}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 0;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;}
+.sidebar-section{margin-bottom:1.5rem;}
+.sidebar-label{font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);padding:0 1.25rem;margin-bottom:0.5rem;font-family:Arial,sans-serif;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 1.25rem;cursor:pointer;font-size:13px;color:var(--text-muted);font-family:Arial,sans-serif;border-left:2px solid transparent;transition:all 0.15s;}
+.nav-item:hover{color:var(--text);background:var(--surface2);}
+.nav-item.active{color:var(--gold);background:rgba(201,168,76,0.08);border-left-color:var(--gold);}
+.nav-item i{font-size:16px;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-family:Arial,sans-serif;}
+.nav-badge.warn{background:var(--warning);color:var(--black);}
+
+/* MAIN */
+.main{flex:1;padding:2rem;overflow-x:hidden;min-width:0;}
+.page{display:none;}
+.page.active{display:block;}
+.page-header{margin-bottom:1.5rem;}
+.page-title{font-size:22px;font-weight:400;color:var(--text);letter-spacing:0.04em;}
+.page-title span{color:var(--gold);}
+.page-subtitle{font-size:13px;color:var(--text-muted);margin-top:4px;font-family:Arial,sans-serif;}
+.gold-divider{height:1px;background:linear-gradient(90deg,var(--gold) 0%,transparent 100%);margin:1rem 0 1.5rem;opacity:0.4;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0.75rem;margin-bottom:1.5rem;}
+.kpi{background:var(--surface2);border-radius:var(--radius);padding:1rem;}
+.kpi-label{font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-bottom:6px;}
+.kpi-value{font-size:22px;font-weight:400;color:var(--text);}
+.kpi-value.gold{color:var(--gold);}
+.kpi-value.green{color:var(--success);}
+.kpi-value.red{color:var(--danger);}
+.kpi-value.warn{color:var(--warning);}
+
+/* TABLES */
+.table-wrap{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1.5rem;}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:0.5px solid var(--border);flex-wrap:wrap;gap:8px;}
+.table-title{font-size:14px;color:var(--text);font-family:Arial,sans-serif;font-weight:500;}
+.table-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;}
+th{padding:10px 1.25rem;text-align:left;font-size:10px;font-weight:500;color:var(--text-dim);letter-spacing:0.06em;text-transform:uppercase;border-bottom:0.5px solid var(--border);}
+td{padding:11px 1.25rem;color:var(--text-muted);border-bottom:0.5px solid rgba(201,168,76,0.06);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);color:var(--text);}
+.status-badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:500;}
+.badge-ok{background:rgba(29,158,117,0.15);color:var(--success);}
+.badge-warn{background:rgba(239,159,39,0.15);color:var(--warning);}
+.badge-danger{background:rgba(226,75,74,0.15);color:var(--danger);}
+.badge-gray{background:rgba(154,148,144,0.15);color:var(--text-muted);}
+.badge-info{background:rgba(55,138,221,0.15);color:var(--info);}
+.empty-state{padding:3rem;text-align:center;color:var(--text-dim);font-family:Arial,sans-serif;font-size:13px;}
+.empty-state i{font-size:32px;display:block;margin-bottom:1rem;opacity:0.4;}
+
+/* MODULES */
+.modules-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem;}
+.module-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1rem;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;gap:10px;}
+.module-card:hover{border-color:var(--gold);background:rgba(201,168,76,0.05);transform:translateY(-1px);}
+.module-icon{width:36px;height:36px;border-radius:8px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:18px;}
+.module-name{font-size:13px;color:var(--text);font-family:Arial,sans-serif;font-weight:500;line-height:1.3;}
+.module-desc{font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;line-height:1.4;}
+
+/* UNIT GRID */
+.unit-grid-wrap{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem;}
+.unit-grid{display:grid;grid-template-columns:36px repeat(4,1fr);gap:5px;}
+.unit-floor-label{display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;}
+.unit-col-header{text-align:center;font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;padding:4px 0;}
+.unit-cell{background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:7px 4px;text-align:center;cursor:pointer;transition:all 0.15s;}
+.unit-cell:hover{border-color:var(--gold);}
+.unit-cell.sold{background:rgba(29,158,117,0.1);border-color:rgba(29,158,117,0.3);}
+.unit-cell.reserved{background:rgba(239,159,39,0.1);border-color:rgba(239,159,39,0.3);}
+.unit-num{font-size:11px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;}
+.unit-status-label{font-size:9px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;}
+.unit-cell.sold .unit-status-label{color:var(--success);}
+.unit-cell.reserved .unit-status-label{color:var(--warning);}
+.unit-legend{display:flex;gap:1rem;margin-bottom:1rem;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);font-family:Arial,sans-serif;}
+.legend-dot{width:10px;height:10px;border-radius:3px;}
+.dot-sold{background:rgba(29,158,117,0.5);}
+.dot-reserved{background:rgba(239,159,39,0.5);}
+.dot-available{background:var(--surface3);border:0.5px solid var(--border);}
+
+/* GANTT */
+.gantt-wrap{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+.gantt-row{display:grid;grid-template-columns:180px 90px 90px 1fr 90px;align-items:center;padding:9px 1.25rem;border-bottom:0.5px solid rgba(201,168,76,0.06);gap:1rem;font-family:Arial,sans-serif;font-size:12px;}
+.gantt-row:last-child{border-bottom:none;}
+.gantt-row.gantt-header{font-size:10px;color:var(--text-dim);letter-spacing:0.06em;text-transform:uppercase;background:var(--surface2);}
+.gantt-bar-wrap{background:var(--surface3);border-radius:3px;height:8px;overflow:hidden;}
+.gantt-bar{height:100%;border-radius:3px;background:var(--gold);}
+.gantt-bar.complete{background:var(--success);}
+.gantt-bar.delay{background:var(--danger);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;display:none;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:0.5px solid var(--border);}
+.modal-title{font-size:16px;color:var(--gold);}
+.modal-body{padding:1.5rem;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:1rem 1.5rem;border-top:0.5px solid var(--border);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.form-select{width:100%;background:var(--surface2);border:0.5px solid var(--border-strong);border-radius:var(--radius);padding:10px 12px;color:var(--text);font-size:13px;font-family:Arial,sans-serif;outline:none;cursor:pointer;}
+.form-select:focus{border-color:var(--gold);}
+textarea.form-input{min-height:80px;resize:vertical;}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius);padding:10px 16px;font-size:13px;font-family:Arial,sans-serif;color:var(--text);white-space:nowrap;animation:slideUp 0.25s ease;}
+.toast.ok{border-left:3px solid var(--success);color:var(--success);}
+.toast.err{border-left:3px solid var(--danger);color:var(--danger);}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:var(--black);z-index:600;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;}
+.loading-spinner{width:36px;height:36px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:13px;color:var(--text-muted);font-family:Arial,sans-serif;}
+
+/* IA */
+.ia-btn{position:fixed;bottom:2rem;right:2rem;width:52px;height:52px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--black);z-index:200;box-shadow:0 4px 20px rgba(201,168,76,0.35);transition:all 0.2s;}
+.ia-btn:hover{background:var(--gold-light);transform:scale(1.05);}
+.ia-panel{position:fixed;bottom:5.5rem;right:2rem;width:340px;background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-lg);overflow:hidden;display:none;z-index:200;flex-direction:column;max-height:480px;}
+.ia-panel.open{display:flex;}
+.ia-header{padding:12px 1rem;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px;}
+.ia-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);}
+.ia-title{font-size:13px;color:var(--gold);font-family:Arial,sans-serif;font-weight:500;}
+.ia-messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:10px;min-height:200px;}
+.ia-msg{max-width:85%;font-size:12px;line-height:1.5;padding:8px 12px;border-radius:10px;font-family:Arial,sans-serif;}
+.ia-msg.bot{background:var(--surface2);color:var(--text-muted);border-bottom-left-radius:2px;}
+.ia-msg.user{background:rgba(201,168,76,0.15);color:var(--gold-light);margin-left:auto;border-bottom-right-radius:2px;}
+.ia-msg.loading{color:var(--text-dim);}
+.ia-suggestions{padding:0 1rem 0.75rem;display:flex;flex-wrap:wrap;gap:6px;}
+.ia-chip{font-size:11px;padding:4px 10px;border-radius:12px;background:var(--surface2);border:0.5px solid var(--border);color:var(--text-muted);cursor:pointer;font-family:Arial,sans-serif;transition:all 0.12s;}
+.ia-chip:hover{border-color:var(--gold);color:var(--gold);}
+.ia-input-row{display:flex;align-items:center;gap:8px;padding:10px 1rem;border-top:0.5px solid var(--border);}
+.ia-input{flex:1;background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Arial,sans-serif;outline:none;}
+.ia-input::placeholder{color:var(--text-dim);}
+.ia-send{background:var(--gold);border:none;border-radius:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--black);font-size:14px;flex-shrink:0;}
+
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .topbar-search{display:none;}
+  .main{padding:1rem;}
+  .alerts-panel{width:100%;}
+  .gantt-row{grid-template-columns:140px 1fr 80px;}
+  .gantt-row>*:nth-child(2),.gantt-row>*:nth-child(3){display:none;}
+  .form-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Carregando Mônaco Residence...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-name">Mônaco</div>
+      <div class="login-logo-sub">Residence · Gestão</div>
+    </div>
+    <div class="login-divider"></div>
+    <div class="form-group">
+      <label class="form-label">E-mail</label>
+      <input type="email" class="form-input" id="loginEmail" placeholder="seu@email.com.br" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input type="password" class="form-input" id="loginPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="login-error" id="loginError">E-mail ou senha incorretos.</div>
+    <button class="btn btn-primary btn-block" style="margin-top:1rem;" onclick="doLogin()" id="loginBtn">Entrar</button>
+    <div style="margin-top:1.5rem;padding-top:1rem;border-top:0.5px solid var(--border);font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;text-align:center;">
+      Sistema restrito · Mônaco Residence © 2026
+    </div>
+    <div style="margin-top:1rem;text-align:center;">
+      <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;">Primeiro acesso? </span>
+      <span style="font-size:11px;color:var(--gold);font-family:Arial,sans-serif;cursor:pointer;text-decoration:underline;" onclick="toggleLoginConfig()">Configurar credenciais</span>
+    </div>
+    <div id="loginConfigPanel" style="display:none;margin-top:1.25rem;padding-top:1rem;border-top:0.5px solid var(--border);">
+      <div class="form-group"><label class="form-label">Supabase Project URL</label><input type="text" class="form-input" id="lcUrl" placeholder="https://xxxx.supabase.co"></div>
+      <div class="form-group"><label class="form-label">Anon Key</label><input type="text" class="form-input" id="lcKey" placeholder="sb_publishable_... ou eyJ..."></div>
+      <button class="btn btn-block" onclick="saveLoginConfig()" style="justify-content:center;margin-top:0.25rem;">Salvar e continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo" onclick="showPage('home')">
+      <span class="logo-name">Mônaco</span>
+      <span class="logo-sub">Residence · Gestão</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-search">
+        <i class="ti ti-search" style="font-size:14px;color:var(--text-dim)" aria-hidden="true"></i>
+        <input type="text" placeholder="Buscar clientes, apartamentos, contratos..." id="globalSearch">
+      </div>
+      <div class="icon-btn" onclick="toggleAlerts()" id="alertBtn" title="Alertas e pendências">
+        <i class="ti ti-bell" aria-hidden="true"></i>
+        <div class="notif-dot" id="notifDot" style="display:none;"></div>
+      </div>
+      <div class="user-chip" onclick="doLogout()">
+        <div class="avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Carregando...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS PANEL -->
+  <div class="alerts-overlay" id="alertsOverlay" onclick="closeAlerts()"></div>
+  <div class="alerts-panel" id="alertsPanel">
+    <div class="alerts-panel-header">
+      <span class="alerts-panel-title">Alertas e Pendências</span>
+      <div class="alerts-close" onclick="closeAlerts()"><i class="ti ti-x" aria-hidden="true"></i></div>
+    </div>
+    <div class="alerts-body" id="alertsBody">
+      <div class="empty-state"><i class="ti ti-bell-off"></i>Carregando alertas...</div>
+    </div>
+    <div class="alerts-footer">
+      <div class="alerts-updated" id="alertsUpdated">—</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Principal</div>
+        <div class="nav-item active" onclick="showPage('home')"><i class="ti ti-layout-grid" aria-hidden="true"></i>Início</div>
+        <div class="nav-item" onclick="showPage('clientes')"><i class="ti ti-building" aria-hidden="true"></i>Clientes<span class="nav-badge" id="badgeInadimplencia" style="display:none;">0</span></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Obra</div>
+        <div class="nav-item" onclick="showPage('cronograma')"><i class="ti ti-timeline" aria-hidden="true"></i>Cronograma Global</div>
+        <div class="nav-item" onclick="showPage('unidades')"><i class="ti ti-layout-grid" aria-hidden="true"></i>Cronograma Unidades</div>
+        <div class="nav-item" onclick="showPage('etapas')"><i class="ti ti-list-check" aria-hidden="true"></i>Etapas Adm.</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Financeiro</div>
+        <div class="nav-item" onclick="showPage('financeiro')"><i class="ti ti-cash" aria-hidden="true"></i>Contas<span class="nav-badge warn" id="badgeContas" style="display:none;">0</span></div>
+        <div class="nav-item" onclick="showPage('fornecedores')"><i class="ti ti-users" aria-hidden="true"></i>Fornecedores</div>
+        <div class="nav-item" onclick="showPage('estoque')"><i class="ti ti-package" aria-hidden="true"></i>Estoque<span class="nav-badge" id="badgeEstoque" style="display:none;">0</span></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Gestão</div>
+        <div class="nav-item" onclick="showPage('documentos')"><i class="ti ti-folder" aria-hidden="true"></i>Documentos</div>
+        <div class="nav-item" onclick="showPage('reunioes')"><i class="ti ti-message-2" aria-hidden="true"></i>Reuniões</div>
+      <div class="nav-item" onclick="showPage('pendencias')"><i class="ti ti-alert-triangle" aria-hidden="true"></i>Pendências Gerais</div>
+        <div class="nav-item" onclick="showPage('relatorios')"><i class="ti ti-chart-bar" aria-hidden="true"></i>Relatórios</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Sistema</div>
+        <div class="nav-item" onclick="showPage('auditoria')"><i class="ti ti-shield-check" aria-hidden="true"></i>Auditoria</div>
+        <div class="nav-item" onclick="showPage('usuarios')"><i class="ti ti-users-group" aria-hidden="true"></i>Usuários</div>
+        <div class="nav-item" onclick="showPage('config')"><i class="ti ti-settings" aria-hidden="true"></i>Configuração</div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+      <!-- HOME -->
+      <div class="page active" id="page-home">
+        <div class="page-header">
+          <div class="page-title">Mônaco <span>Residence</span></div>
+          <div class="page-subtitle">Av. Nereu Ramos, 1271 · Chapecó, SC · 60 unidades · 21 andares</div>
+        </div>
+        <div class="gold-divider"></div>
+        <div style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);margin-bottom:1rem;font-family:Arial,sans-serif;">Módulos do sistema</div>
+        <div class="modules-grid">
+          <div class="module-card" onclick="showPage('clientes')"><div class="module-icon"><i class="ti ti-building" aria-hidden="true"></i></div><div class="module-name">Clientes</div><div class="module-desc">60 unidades, contratos e recebimentos</div></div>
+          <div class="module-card" onclick="showPage('cronograma')"><div class="module-icon"><i class="ti ti-timeline" aria-hidden="true"></i></div><div class="module-name">Cronograma Global</div><div class="module-desc">20 etapas da obra, Gantt e % realizado</div></div>
+          <div class="module-card" onclick="showPage('unidades')"><div class="module-icon"><i class="ti ti-layout-grid" aria-hidden="true"></i></div><div class="module-name">Cronograma Unidades</div><div class="module-desc">Progresso individual por apartamento</div></div>
+          <div class="module-card" onclick="showPage('etapas')"><div class="module-icon"><i class="ti ti-list-check" aria-hidden="true"></i></div><div class="module-name">Etapas Adm.</div><div class="module-desc">Legal, comercial, obra e entrega</div></div>
+          <div class="module-card" onclick="showPage('financeiro')"><div class="module-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="module-name">Financeiro</div><div class="module-desc">Contas a pagar e a receber</div></div>
+          <div class="module-card" onclick="showPage('fornecedores')"><div class="module-icon"><i class="ti ti-users" aria-hidden="true"></i></div><div class="module-name">Fornecedores</div><div class="module-desc">Contratos, certidões e status</div></div>
+          <div class="module-card" onclick="showPage('estoque')"><div class="module-icon"><i class="ti ti-package" aria-hidden="true"></i></div><div class="module-name">Compras e Estoque</div><div class="module-desc">Materiais, entradas e saídas</div></div>
+          <div class="module-card" onclick="showPage('documentos')"><div class="module-icon"><i class="ti ti-folder" aria-hidden="true"></i></div><div class="module-name">Documentos</div><div class="module-desc">Alvarás, ARTs, projetos e contratos</div></div>
+          <div class="module-card" onclick="showPage('reunioes')"><div class="module-icon"><i class="ti ti-message-2" aria-hidden="true"></i></div><div class="module-name">Reuniões</div><div class="module-desc">Atas, decisões e pendências</div></div>
+          <div class="module-card" onclick="showPage('pendencias')"><div class="module-icon"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div><div class="module-name">Pendências Gerais</div><div class="module-desc">Garagens, térreo, lazer e áreas comuns</div></div>
+          <div class="module-card" onclick="showPage('relatorios')"><div class="module-icon"><i class="ti ti-chart-bar" aria-hidden="true"></i></div><div class="module-name">Relatórios</div><div class="module-desc">Exportação em PDF e Excel</div></div>
+        </div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div class="page" id="page-clientes">
+        <div class="page-header"><div class="page-title"><span>Clientes</span> e Unidades</div><div class="page-subtitle">60 apartamentos · Andares 6 a 21 · 4 unidades por andar</div></div>
+        <div class="gold-divider"></div>
+        <div class="kpi-row" id="kpiClientes">
+          <div class="kpi"><div class="kpi-label">Total unidades</div><div class="kpi-value">60</div></div>
+          <div class="kpi"><div class="kpi-label">Vendidas</div><div class="kpi-value green" id="kpiVendidas">—</div></div>
+          <div class="kpi"><div class="kpi-label">Disponíveis</div><div class="kpi-value gold" id="kpiDisponiveis">—</div></div>
+          <div class="kpi"><div class="kpi-label">Reservadas</div><div class="kpi-value warn" id="kpiReservadas">—</div></div>
+        </div>
+        <div class="unit-grid-wrap">
+          <div class="unit-legend">
+            <div class="legend-item"><div class="legend-dot dot-sold"></div>Vendido</div>
+            <div class="legend-item"><div class="legend-dot dot-reserved"></div>Reservado</div>
+            <div class="legend-item"><div class="legend-dot dot-available"></div>Disponível</div>
+          </div>
+          <div class="unit-grid" id="unitGrid">
+            <div></div>
+            <div class="unit-col-header">01</div>
+            <div class="unit-col-header">02</div>
+            <div class="unit-col-header">03</div>
+            <div class="unit-col-header">04</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header">
+            <span class="table-title">Clientes cadastrados</span>
+            <div class="table-actions">
+              <button class="btn btn-primary btn-sm" onclick="openModalCliente()"><i class="ti ti-plus" aria-hidden="true"></i>Novo cliente</button>
+            </div>
+          </div>
+          <table><thead><tr><th>Apartamento</th><th>Cliente</th><th>CPF/CNPJ</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="clientesBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- CRONOGRAMA GLOBAL -->
+      <div class="page" id="page-cronograma">
+        <div class="page-header">
+          <div class="page-title">Cronograma <span>Global</span></div>
+          <div class="page-subtitle">Avanço físico ponderado · Clique em cada disciplina para ver e editar sub-etapas</div>
+        </div>
+        <div class="gold-divider"></div>
+        <div class="kpi-row" id="kpiCronograma">
+          <div class="kpi"><div class="kpi-label">% Geral da obra</div><div class="kpi-value gold" id="kpiGeralObra">0%</div></div>
+          <div class="kpi"><div class="kpi-label">Disciplinas concluídas</div><div class="kpi-value green" id="kpiDisciplinasOk">0</div></div>
+          <div class="kpi"><div class="kpi-label">Em andamento</div><div class="kpi-value warn" id="kpiDisciplinasAnd">0</div></div>
+          <div class="kpi"><div class="kpi-label">Não iniciadas</div><div class="kpi-value" id="kpiDisciplinasNao">0</div></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+          <button class="btn btn-sm" onclick="abrirModalPesos()"><i class="ti ti-adjustments" aria-hidden="true"></i> Editar pesos das disciplinas</button>
+        </div>
+        <div id="ganttBody"></div>
+      </div>
+
+      <!-- CRONOGRAMA UNIDADES -->
+      <div class="page" id="page-unidades">
+        <div class="page-header"><div class="page-title">Cronograma das <span>Unidades</span></div><div class="page-subtitle">Progresso por apartamento · Clique em uma disciplina para detalhar e registrar pendências</div></div>
+        <div class="gold-divider"></div>
+        <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+          <select class="form-select" style="width:auto;" id="filterAndar" onchange="loadCronogramaUnidades()">
+            <option value="">Todos os andares</option>
+          </select>
+          <select class="form-select" style="width:auto;" id="filterDiscExport" onchange="filtrarPendencias()">
+            <option value="">Todas as disciplinas</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportarPendencias()" style="margin-left:auto;"><i class="ti ti-file-export" aria-hidden="true"></i> Exportar pendências</button>
+        </div>
+        <div id="unitScheduleWrap">
+          <div class="empty-state" style="padding:2rem;text-align:center;color:var(--text-dim);font-family:Arial,sans-serif;">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- ETAPAS ADM -->
+      <div class="page" id="page-etapas">
+        <div class="page-header"><div class="page-title">Etapas <span>Administrativas</span></div><div class="page-subtitle">Legal · Comercial · Obra · Entrega</div></div>
+        <div class="gold-divider"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;" id="etapasGrid"></div>
+      </div>
+
+      <!-- FINANCEIRO -->
+      <div class="page" id="page-financeiro">
+        <div class="page-header"><div class="page-title"><span>Financeiro</span></div><div class="page-subtitle">Contas a pagar · Contas a receber · Fluxo de caixa</div></div>
+        <div class="gold-divider"></div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="kpi-label">A pagar (pendente)</div><div class="kpi-value red" style="font-size:16px" id="kpiAPagar">—</div></div>
+          <div class="kpi"><div class="kpi-label">A receber (pendente)</div><div class="kpi-value green" style="font-size:16px" id="kpiAReceber">—</div></div>
+          <div class="kpi"><div class="kpi-label">Parcelas em atraso</div><div class="kpi-value red" id="kpiAtrasadas">—</div></div>
+          <div class="kpi"><div class="kpi-label">Contas vencendo (7d)</div><div class="kpi-value warn" id="kpiVencendo">—</div></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="showFinTab('pagar')" id="tabPagar">Contas a Pagar</button>
+          <button class="btn btn-sm" onclick="showFinTab('receber')" id="tabReceber">Contas a Receber</button>
+          <div style="margin-left:auto;"><button class="btn btn-sm" onclick="openModal('modalContaPagar')"><i class="ti ti-plus" aria-hidden="true"></i>Nova conta</button></div>
+        </div>
+        <div id="finTablePagar">
+          <div class="table-wrap"><table><thead><tr><th>Fornecedor</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="contasPagarBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody></table></div>
+        </div>
+        <div id="finTableReceber" style="display:none;">
+          <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Apartamento</th><th>Parcela</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="parcelasBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- FORNECEDORES -->
+      <div class="page" id="page-fornecedores">
+        <div class="page-header"><div class="page-title"><span>Fornecedores</span> e Empreiteiros</div><div class="page-subtitle">Contratos, certidões e status</div></div>
+        <div class="gold-divider"></div>
+        <div class="table-wrap">
+          <div class="table-header"><span class="table-title">Fornecedores cadastrados</span>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modalFornecedor')"><i class="ti ti-plus" aria-hidden="true"></i>Novo fornecedor</button>
+          </div>
+          <table><thead><tr><th>Nome</th><th>Categoria</th><th>Responsável</th><th>Valor contratado</th><th>Término</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="fornecedoresBody"><tr><td colspan="7" class="empty-state">Carregando...</td></tr></tbody></table>
+        </div>
+      </div>
+
+      <!-- ESTOQUE -->
+      <div class="page" id="page-estoque">
+        <div class="page-header"><div class="page-title">Compras e <span>Estoque</span></div><div class="page-subtitle">Materiais · Entradas e saídas · Estoque mínimo</div></div>
+        <div class="gold-divider"></div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalMaterial')"><i class="ti ti-plus" aria-hidden="true"></i>Novo material</button>
+          <button class="btn btn-sm" onclick="openModal('modalMovEstoque')"><i class="ti ti-arrows-exchange" aria-hidden="true"></i>Lançar entrada/saída</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Material</th><th>Unidade</th><th>Estoque atual</th><th>Estoque mínimo</th><th>Situação</th><th>Ações</th></tr></thead>
+        <tbody id="estoqueBody"><tr><td colspan="6" class="empty-state">Carregando...</td></tr></tbody></table></div>
+      </div>
+
+      <!-- DOCUMENTOS -->
+      <div class="page" id="page-documentos">
+        <div class="page-header"><div class="page-title"><span>Documentos</span></div><div class="page-subtitle">Projetos, alvarás, licenças, ARTs, contratos e mais</div></div>
+        <div class="gold-divider"></div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center;">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalDocumento')"><i class="ti ti-upload" aria-hidden="true"></i>Upload documento</button>
+          <select class="form-select" style="width:auto;" id="filterCategoria" onchange="loadDocumentos()">
+            <option value="">Todas as categorias</option>
+            <option value="projetos">Projetos</option><option value="alvaras">Alvarás</option>
+            <option value="licencas">Licenças</option><option value="arts">ARTs</option>
+            <option value="rrts">RRTs</option><option value="seguros">Seguros</option>
+            <option value="contratos">Contratos</option><option value="habite_se">Habite-se</option>
+            <option value="legal">Documentação Legal</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Nome</th><th>Categoria</th><th>Data</th><th>Versão</th><th>Ações</th></tr></thead>
+        <tbody id="documentosBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table></div>
+      </div>
+
+      <!-- REUNIÕES -->
+      <div class="page" id="page-reunioes">
+        <div class="page-header"><div class="page-title">Registro de <span>Reuniões</span></div><div class="page-subtitle">Atas, decisões e pendências</div></div>
+        <div class="gold-divider"></div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalReuniao')"><i class="ti ti-plus" aria-hidden="true"></i>Nova reunião</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Data</th><th>Assunto</th><th>Participantes</th><th>Pendências</th><th>Ações</th></tr></thead>
+        <tbody id="reunioesBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table></div>
+      </div>
+
+      <!-- PENDÊNCIAS GERAIS -->
+      <div class="page" id="page-pendencias">
+        <div class="page-header">
+          <div class="page-title">Pendências <span>Gerais</span></div>
+          <div class="page-subtitle">Áreas comuns · Garagens · Térreo · Lazer · Por disciplina</div>
+        </div>
+        <div class="gold-divider"></div>
+        <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;">
+          <select class="form-select" style="width:auto;" id="pgArea" onchange="loadPendenciasGerais()">
+            <option value="subsolo">Subsolo</option>
+            <option value="terreo">Térreo</option>
+            <option value="g1">G1</option>
+            <option value="g2">G2</option>
+            <option value="g3">G3</option>
+            <option value="lazer">Lazer</option>
+          </select>
+          <select class="form-select" style="width:auto;" id="pgDisc" onchange="loadPendenciasGerais()">
+            <option value="">Todas as disciplinas</option>
+          </select>
+          <button class="btn btn-sm" onclick="exportarPendenciasGerais()" style="margin-left:auto;">
+            <i class="ti ti-file-export" aria-hidden="true"></i> Exportar
+          </button>
+        </div>
+        <div id="pgWrap"></div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div class="page" id="page-relatorios">
+        <div class="page-header"><div class="page-title"><span>Relatórios</span></div><div class="page-subtitle">Exportação em PDF e Excel · Dados reais do sistema</div></div>
+        <div class="gold-divider"></div>
+        <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <div style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;">Todos os relatórios exportam dados reais do banco.</div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+            <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;">PDF</span>
+            <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;">= abre nova aba para imprimir</span>
+            <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-left:8px;">Excel</span>
+            <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;">= baixa arquivo .csv compatível</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+          <div class="module-card"><div class="module-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="module-name">Fluxo de caixa</div><div class="module-desc">Contas a pagar e parcelas a receber com status e vencimentos</div><div style="margin-top:10px;display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportReport('fluxo','pdf')"><i class="ti ti-file-type-pdf" aria-hidden="true"></i> PDF</button><button class="btn btn-sm" onclick="exportReport('fluxo','xlsx')"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Excel</button></div></div>
+          <div class="module-card"><div class="module-icon"><i class="ti ti-building" aria-hidden="true"></i></div><div class="module-name">Unidades e clientes</div><div class="module-desc">Status de cada unidade, cliente, telefone e e-mail</div><div style="margin-top:10px;display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportReport('unidades','pdf')"><i class="ti ti-file-type-pdf" aria-hidden="true"></i> PDF</button><button class="btn btn-sm" onclick="exportReport('unidades','xlsx')"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Excel</button></div></div>
+          <div class="module-card"><div class="module-icon"><i class="ti ti-timeline" aria-hidden="true"></i></div><div class="module-name">Evolução física da obra</div><div class="module-desc">20 etapas com percentual e datas previstas × realizadas</div><div style="margin-top:10px;display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportReport('obra','pdf')"><i class="ti ti-file-type-pdf" aria-hidden="true"></i> PDF</button><button class="btn btn-sm" onclick="exportReport('obra','xlsx')"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Excel</button></div></div>
+          <div class="module-card"><div class="module-icon"><i class="ti ti-package" aria-hidden="true"></i></div><div class="module-name">Compras e materiais</div><div class="module-desc">Estoque atual, mínimo e situação de cada material</div><div style="margin-top:10px;display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportReport('materiais','pdf')"><i class="ti ti-file-type-pdf" aria-hidden="true"></i> PDF</button><button class="btn btn-sm" onclick="exportReport('materiais','xlsx')"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Excel</button></div></div>
+          <div class="module-card"><div class="module-icon"><i class="ti ti-users" aria-hidden="true"></i></div><div class="module-name">Fornecedores</div><div class="module-desc">Todos os contratos com valores e status atual</div><div style="margin-top:10px;display:flex;gap:6px;"><button class="btn btn-sm" onclick="exportReport('fornecedores','pdf')"><i class="ti ti-file-type-pdf" aria-hidden="true"></i> PDF</button><button class="btn btn-sm" onclick="exportReport('fornecedores','xlsx')"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Excel</button></div></div>
+          <div class="module-card"><div class="module-icon"><i class="ti ti-database-export" aria-hidden="true"></i></div><div class="module-name">Backup completo</div><div class="module-desc">Exporta todos os dados do sistema em JSON para backup</div><div style="margin-top:10px;"><button class="btn btn-sm" onclick="exportarTodosDados()"><i class="ti ti-download" aria-hidden="true"></i> Baixar JSON</button></div></div>
+        </div>
+      </div>
+
+      <!-- AUDITORIA -->
+      <div class="page" id="page-auditoria">
+        <div class="page-header"><div class="page-title"><span>Auditoria</span></div><div class="page-subtitle">Registro completo de todas as operações do sistema</div></div>
+        <div class="gold-divider"></div>
+        <div class="table-wrap"><table><thead><tr><th>Data/Hora</th><th>Usuário</th><th>Tabela</th><th>Operação</th><th>Registro</th></tr></thead>
+        <tbody id="auditoriaBody"><tr><td colspan="5" class="empty-state">Carregando...</td></tr></tbody></table></div>
+      </div>
+
+      <!-- USUÁRIOS -->
+      <div class="page" id="page-usuarios">
+        <div class="page-header"><div class="page-title">Controle de <span>Usuários</span></div><div class="page-subtitle">Perfis de acesso e permissões</div></div>
+        <div class="gold-divider"></div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+          <button class="btn btn-primary btn-sm" onclick="openModal('modalUsuario')"><i class="ti ti-plus" aria-hidden="true"></i>Novo usuário</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th></tr></thead>
+        <tbody id="usuariosBody"><tr><td colspan="4" class="empty-state">Carregando...</td></tr></tbody></table></div>
+      </div>
+
+      <!-- CONFIG -->
+      <div class="page" id="page-config">
+        <div class="page-header"><div class="page-title"><span>Configuração</span></div><div class="page-subtitle">Conexão com Supabase e chave do Assistente IA</div></div>
+        <div class="gold-divider"></div>
+        <div style="background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-lg);padding:1.5rem;max-width:520px;">
+          <div style="font-size:14px;color:var(--gold);margin-bottom:1.5rem;font-family:Arial,sans-serif;font-weight:500;">Credenciais do sistema</div>
+          <div class="form-group"><label class="form-label">Supabase Project URL</label><input type="text" class="form-input" id="cfgUrl" placeholder="https://xxxx.supabase.co"></div>
+          <div class="form-group"><label class="form-label">Supabase Anon Key</label><input type="text" class="form-input" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIs..."></div>
+          <div class="form-group" style="margin-top:1.5rem;"><label class="form-label">Chave API Claude (Assistente IA)</label><input type="password" class="form-input" id="cfgClaude" placeholder="sk-ant-..."></div>
+          <button class="btn btn-primary btn-block" onclick="saveConfig()" style="margin-top:0.5rem;">Salvar e reconectar</button>
+          <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:1.25rem;padding-top:1rem;border-top:0.5px solid var(--border);line-height:1.7;">
+            Encontre as credenciais em <strong style="color:var(--text-muted);">supabase.com → Project Settings → API</strong>.<br>
+            Não tem conta? É gratuito para este volume de dados.
+          </div>
+          <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:0.5px solid var(--border);">
+            <div style="font-size:14px;color:var(--text);font-family:Arial,sans-serif;font-weight:500;margin-bottom:0.5rem;">Exportação e backup</div>
+            <div style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;margin-bottom:1rem;line-height:1.6;">Exporte todos os dados do sistema em formato JSON. Guarde o arquivo em local seguro como backup.</div>
+            <button class="btn btn-block" onclick="exportarTodosDados()" style="justify-content:center;gap:8px;"><i class="ti ti-database-export" aria-hidden="true"></i>Exportar todos os dados (backup)</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODALS -->
+<!-- Cliente -->
+<div class="modal-overlay" id="modalCliente">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Novo cliente</span><div class="alerts-close" onclick="closeModal('modalCliente')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Apartamento</label>
+        <select class="form-select" id="clienteUnidade"><option value="">Selecionar unidade disponível...</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome completo</label><input type="text" class="form-input" id="clienteNome" placeholder="Nome do comprador"></div>
+        <div class="form-group"><label class="form-label">CPF / CNPJ</label><input type="text" class="form-input" id="clienteCpf" placeholder="000.000.000-00"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Telefone</label><input type="text" class="form-input" id="clienteTel" placeholder="(49) 9 9999-0000"></div>
+        <div class="form-group"><label class="form-label">E-mail</label><input type="email" class="form-input" id="clienteEmail" placeholder="cliente@email.com"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:0.5rem;">Dados financeiros (valor, parcelas) podem ser adicionados após o cadastro.</div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalCliente')">Cancelar</button><button class="btn btn-primary" onclick="salvarCliente()">Salvar cliente</button></div>
+  </div>
+</div>
+
+<!-- Conta a pagar -->
+<div class="modal-overlay" id="modalContaPagar">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Nova conta a pagar</span><div class="alerts-close" onclick="closeModal('modalContaPagar')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Fornecedor / Nome</label><input type="text" class="form-input" id="cpFornecedor" placeholder="Nome do fornecedor ou empresa"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Categoria</label>
+          <select class="form-select" id="cpCategoria">
+            <option value="materiais">Materiais</option><option value="mao_de_obra">Mão de obra</option>
+            <option value="impostos">Impostos</option><option value="servicos">Serviços</option>
+            <option value="equipamentos">Equipamentos</option><option value="outros">Outros</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Valor (R$)</label><input type="number" class="form-input" id="cpValor" placeholder="0,00" step="0.01"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Descrição</label><input type="text" class="form-input" id="cpDescricao" placeholder="Descreva o que está sendo pago"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Data de emissão</label><input type="date" class="form-input" id="cpEmissao"></div>
+        <div class="form-group"><label class="form-label">Vencimento</label><input type="date" class="form-input" id="cpVencimento"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalContaPagar')">Cancelar</button><button class="btn btn-primary" onclick="salvarContaPagar()">Salvar conta</button></div>
+  </div>
+</div>
+
+<!-- Fornecedor -->
+<div class="modal-overlay" id="modalFornecedor">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Novo fornecedor</span><div class="alerts-close" onclick="closeModal('modalFornecedor')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome / Razão social</label><input type="text" class="form-input" id="fornNome" placeholder="Nome completo ou empresa"></div>
+        <div class="form-group"><label class="form-label">CPF / CNPJ</label><input type="text" class="form-input" id="fornCpf" placeholder="000.000.000-00"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Responsável</label><input type="text" class="form-input" id="fornResponsavel"></div>
+        <div class="form-group"><label class="form-label">Categoria</label>
+          <select class="form-select" id="fornCategoria">
+            <option value="pedreiros">Pedreiros</option><option value="gesseiros">Gesseiros</option>
+            <option value="pintores">Pintores</option><option value="eletricistas">Eletricistas</option>
+            <option value="encanadores">Encanadores</option><option value="terceirizados">Empresas terceirizadas</option>
+            <option value="outros">Outros</option>
+          </select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Telefone</label><input type="text" class="form-input" id="fornTel"></div>
+        <div class="form-group"><label class="form-label">E-mail</label><input type="email" class="form-input" id="fornEmail"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor contratado (R$)</label><input type="number" class="form-input" id="fornValor" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-select" id="fornStatus"><option value="ativo">Ativo</option><option value="aguardando">Aguardando</option><option value="encerrado">Encerrado</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Início</label><input type="date" class="form-input" id="fornInicio"></div>
+        <div class="form-group"><label class="form-label">Término previsto</label><input type="date" class="form-input" id="fornTermino"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalFornecedor')">Cancelar</button><button class="btn btn-primary" onclick="salvarFornecedor()">Salvar fornecedor</button></div>
+  </div>
+</div>
+
+<!-- Material -->
+<div class="modal-overlay" id="modalMaterial">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Novo material</span><div class="alerts-close" onclick="closeModal('modalMaterial')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome do material</label><input type="text" class="form-input" id="matNome" placeholder="Ex: Cimento CP-II"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Unidade de medida</label><input type="text" class="form-input" id="matUnidade" placeholder="Ex: sacos, kg, m³"></div>
+        <div class="form-group"><label class="form-label">Estoque mínimo</label><input type="number" class="form-input" id="matMinimo" step="0.001"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalMaterial')">Cancelar</button><button class="btn btn-primary" onclick="salvarMaterial()">Salvar material</button></div>
+  </div>
+</div>
+
+<!-- Movimentação Estoque -->
+<div class="modal-overlay" id="modalMovEstoque">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Entrada / Saída de estoque</span><div class="alerts-close" onclick="closeModal('modalMovEstoque')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Material</label>
+        <select class="form-select" id="movMaterial"><option value="">Selecionar material...</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tipo</label>
+          <select class="form-select" id="movTipo"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>
+        <div class="form-group"><label class="form-label">Quantidade</label><input type="number" class="form-input" id="movQtd" step="0.001"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor unitário (R$)</label><input type="number" class="form-input" id="movValor" step="0.01"></div>
+        <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="movData"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Observação</label><input type="text" class="form-input" id="movObs" placeholder="Opcional"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalMovEstoque')">Cancelar</button><button class="btn btn-primary" onclick="salvarMovEstoque()">Registrar</button></div>
+  </div>
+</div>
+
+<!-- Documento -->
+<div class="modal-overlay" id="modalDocumento">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Upload de documento</span><div class="alerts-close" onclick="closeModal('modalDocumento')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome do documento</label><input type="text" class="form-input" id="docNome" placeholder="Ex: Alvará de Construção 2026"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Categoria</label>
+          <select class="form-select" id="docCategoria">
+            <option value="projetos">Projetos</option><option value="alvaras">Alvarás</option>
+            <option value="licencas">Licenças</option><option value="arts">ARTs</option>
+            <option value="rrts">RRTs</option><option value="seguros">Seguros</option>
+            <option value="contratos">Contratos</option><option value="habite_se">Habite-se</option>
+            <option value="legal">Documentação Legal</option>
+          </select></div>
+        <div class="form-group"><label class="form-label">Versão</label><input type="text" class="form-input" id="docVersao" value="v1.0"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Arquivo (PDF, JPG, PNG, DOCX, XLSX)</label>
+        <input type="file" class="form-input" id="docArquivo" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" style="cursor:pointer;"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalDocumento')">Cancelar</button><button class="btn btn-primary" onclick="salvarDocumento()">Fazer upload</button></div>
+  </div>
+</div>
+
+<!-- Reunião -->
+<div class="modal-overlay" id="modalReuniao">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Nova reunião</span><div class="alerts-close" onclick="closeModal('modalReuniao')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="reunData"></div>
+        <div class="form-group"><label class="form-label">Participantes</label><input type="text" class="form-input" id="reunParticipantes" placeholder="Ex: Willian, Eng. Pedro, Arq. Ana"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Assunto</label><input type="text" class="form-input" id="reunAssunto" placeholder="Tema principal da reunião"></div>
+      <div class="form-group"><label class="form-label">Decisões tomadas</label><textarea class="form-input" id="reunDecisoes" placeholder="Liste as decisões..."></textarea></div>
+      <div class="form-group"><label class="form-label">Pendências</label><textarea class="form-input" id="reunPendencias" placeholder="O que ficou pendente..."></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Responsável pelas pendências</label><input type="text" class="form-input" id="reunResponsavel"></div>
+        <div class="form-group"><label class="form-label">Prazo</label><input type="date" class="form-input" id="reunPrazo"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalReuniao')">Cancelar</button><button class="btn btn-primary" onclick="salvarReuniao()">Salvar reunião</button></div>
+  </div>
+</div>
+
+<!-- Pesos das disciplinas -->
+<div class="modal-overlay" id="modalPesos">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header"><span class="modal-title">Editar pesos das disciplinas</span><div class="alerts-close" onclick="closeModal('modalPesos')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;margin-bottom:1rem;">A soma total deve ser 100%. O percentual geral da obra é calculado com base nesses pesos.</div>
+      <div id="pesosForm"></div>
+      <div style="margin-top:1rem;padding:0.75rem 1rem;background:var(--surface2);border-radius:var(--radius);display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-family:Arial,sans-serif;color:var(--text-muted);">Total:</span>
+        <span style="font-size:16px;font-weight:500;font-family:Arial,sans-serif;" id="pesosTotalLabel">0%</span>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalPesos')">Cancelar</button><button class="btn btn-primary" onclick="salvarPesos()">Salvar pesos</button></div>
+  </div>
+</div>
+
+<!-- Subitem de etapa -->
+<div class="modal-overlay" id="modalSubitem">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><span class="modal-title" id="modalSubitemTitle">Sub-etapa</span><div class="alerts-close" onclick="closeModal('modalSubitem')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome da sub-etapa</label><input type="text" class="form-input" id="subNome" placeholder="Ex: Tipo 16"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Peso (%)</label><input type="number" class="form-input" id="subPeso" min="0" max="100" step="0.1" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">% Concluído</label><input type="number" class="form-input" id="subPct" min="0" max="100" step="1" placeholder="0"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalSubitem')">Cancelar</button><button class="btn btn-primary" onclick="salvarSubitem()">Salvar</button></div>
+  </div>
+</div>
+
+<!-- Detalhe da Unidade -->
+<div class="modal-overlay" id="modalUnidade">
+  <div class="modal" style="max-width:600px;max-height:92vh;overflow-y:auto;">
+    <div class="modal-header" style="position:sticky;top:0;background:var(--surface);z-index:10;">
+      <span class="modal-title" id="modalUnidadeTitle">Apartamento</span>
+      <div class="alerts-close" onclick="closeModal('modalUnidade');loadCronogramaUnidades();"><i class="ti ti-x"></i></div>
+    </div>
+    <div class="modal-body" id="modalUnidadeBody" style="padding:1rem;"></div>
+  </div>
+</div>
+
+<!-- Parcela -->
+<div class="modal-overlay" id="modalParcela">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Cadastrar parcelas do cliente</span><div class="alerts-close" onclick="closeModal('modalParcela')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Cliente / Unidade</label>
+        <select class="form-select" id="parcelaCliente" onchange="preencherDadosParcela()"><option value="">Selecionar cliente...</option></select></div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:0.75rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;" id="parcelaInfoCliente">Selecione um cliente para ver os dados.</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor total da venda (R$)</label><input type="number" class="form-input" id="parcelaValorTotal" step="0.01" placeholder="0,00"></div>
+        <div class="form-group"><label class="form-label">Valor da entrada (R$)</label><input type="number" class="form-input" id="parcelaEntrada" step="0.01" placeholder="0,00"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Número de parcelas</label><input type="number" class="form-input" id="parcelaNumero" min="1" max="240" placeholder="48"></div>
+        <div class="form-group"><label class="form-label">Vencimento 1ª parcela</label><input type="date" class="form-input" id="parcelaPrimeiro"></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:var(--radius);padding:0.75rem 1rem;font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;" id="parcelaPreview">Preencha os campos para ver o resumo.</div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalParcela')">Cancelar</button><button class="btn btn-primary" onclick="gerarParcelas()">Gerar parcelas</button></div>
+  </div>
+</div>
+
+<!-- Usuário -->
+<div class="modal-overlay" id="modalUsuario">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Novo usuário</span><div class="alerts-close" onclick="closeModal('modalUsuario')"><i class="ti ti-x"></i></div></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome completo</label><input type="text" class="form-input" id="usuNome"></div>
+      <div class="form-group"><label class="form-label">E-mail</label><input type="email" class="form-input" id="usuEmail"></div>
+      <div class="form-group"><label class="form-label">Senha provisória</label><input type="password" class="form-input" id="usuSenha"></div>
+      <div class="form-group"><label class="form-label">Perfil de acesso</label>
+        <select class="form-select" id="usuPerfil">
+          <option value="admin">Administrador</option><option value="financeiro">Financeiro</option>
+          <option value="engenharia">Engenharia</option><option value="comercial">Comercial</option>
+          <option value="consulta">Consulta</option>
+        </select></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modalUsuario')">Cancelar</button><button class="btn btn-primary" onclick="salvarUsuario()">Criar usuário</button></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- IA -->
+<button class="ia-btn" onclick="toggleIA()" aria-label="Assistente IA"><i class="ti ti-robot" aria-hidden="true"></i></button>
+<div class="ia-panel" id="iaPanel">
+  <div class="ia-header"><div class="ia-dot"></div><span class="ia-title">Assistente Mônaco</span></div>
+  <div class="ia-messages" id="iaMessages">
+    <div class="ia-msg bot">Olá! Posso consultar dados reais do sistema. O que deseja saber?</div>
+  </div>
+  <div class="ia-suggestions">
+    <span class="ia-chip" onclick="askIA('Quais contas vencem esta semana?')">Contas da semana</span>
+    <span class="ia-chip" onclick="askIA('Quais apartamentos estão com parcelas em atraso?')">Inadimplência</span>
+    <span class="ia-chip" onclick="askIA('Qual o percentual atual da obra?')">% da obra</span>
+    <span class="ia-chip" onclick="askIA('Quais materiais estão abaixo do estoque mínimo?')">Estoque crítico</span>
+  </div>
+  <div class="ia-input-row">
+    <input class="ia-input" id="iaInput" placeholder="Pergunte sobre a obra..." onkeydown="if(event.key==='Enter')sendIA()">
+    <button class="ia-send" onclick="sendIA()"><i class="ti ti-send" aria-hidden="true"></i></button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG & INIT
+// ============================================================
+let sbClient = null;
+let currentUser = null;
+let currentUserProfile = null;
+
+function getConfig() {
+  return {
+    url: localStorage.getItem('sb_url') || '',
+    key: localStorage.getItem('sb_key') || '',
+    claude: localStorage.getItem('claude_key') || ''
+  };
+}
+
+function initSupabase() {
+  if (sbClient) return true; // já inicializado, não criar de novo
+  const cfg = getConfig();
+  if (cfg.url && cfg.key) {
+    try {
+      sbClient = window.supabase.createClient(cfg.url, cfg.key, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'monaco-auth' }
+      });
+      return true;
+    } catch(e) {
+      console.error('Erro ao criar cliente Supabase:', e);
+      return false;
+    }
+  }
+  return false;
+}
+
+async function boot() {
+  // Credenciais padrão — já configuradas
+  const DEFAULT_URL = 'https://swxdrmpcgguoyukrmrpn.supabase.co';
+  const DEFAULT_KEY = 'sb_publishable_Kq-CzJ0LsuMuyi7aeBkjGA_Z2NM2j2-';
+  if (!localStorage.getItem('sb_url')) localStorage.setItem('sb_url', DEFAULT_URL);
+  if (!localStorage.getItem('sb_key')) localStorage.setItem('sb_key', DEFAULT_KEY);
+
+  const cfg = getConfig();
+  if (cfg.url) document.getElementById('cfgUrl').value = cfg.url;
+  if (cfg.key) document.getElementById('cfgKey').value = cfg.key;
+  if (cfg.claude) document.getElementById('cfgClaude').value = cfg.claude;
+
+  if (!initSupabase()) {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    showToast('Configure as credenciais do Supabase antes de fazer login.', 'err');
+    showPage('config');
+    return;
+  }
+
+  const { data: { session } } = await sbClient.auth.getSession();
+  document.getElementById('loadingOverlay').style.display = 'none';
+  if (session) {
+    await loginSuccess(session.user);
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  if (!email || !pass) { err.textContent = 'Preencha e-mail e senha.'; err.style.display = 'block'; return; }
+  btn.textContent = 'Entrando...'; btn.disabled = true; err.style.display = 'none';
+  if (!initSupabase()) { err.textContent = 'Configure as credenciais do Supabase primeiro.'; err.style.display = 'block'; btn.textContent = 'Entrar'; btn.disabled = false; showPage('config'); return; }
+  const { data, error } = await sbClient.auth.signInWithPassword({ email, password: pass });
+  btn.textContent = 'Entrar'; btn.disabled = false;
+  if (error) { err.textContent = 'E-mail ou senha incorretos.'; err.style.display = 'block'; return; }
+  await loginSuccess(data.user);
+}
+
+async function loginSuccess(user) {
+  currentUser = user;
+  console.log('Login OK, user:', user.id, 'sbClient:', !!sbClient);
+  const { data: profile } = await sbClient.from('usuarios').select('*').eq('auth_id', user.id).single();
+  currentUserProfile = profile;
+  const nome = profile?.nome || user.email.split('@')[0];
+  document.getElementById('userAvatar').textContent = nome.charAt(0).toUpperCase();
+  document.getElementById('userName').textContent = nome;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  buildAndarFilter();
+  loadPageData('home');
+}
+
+async function doLogout() {
+  if (!confirm('Sair do sistema?')) return;
+  await sbClient.auth.signOut();
+  currentUser = null; currentUserProfile = null;
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + id);
+  if (pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes("'"+id+"'")) n.classList.add('active');
+  });
+  loadPageData(id);
+}
+
+function loadPageData(id) {
+  if (!sbClient) return;
+  const loaders = {
+    home: ()=>{},
+    clientes: loadClientes,
+    cronograma: loadCronograma,
+    etapas: loadEtapas,
+    financeiro: loadFinanceiro,
+    fornecedores: loadFornecedores,
+    estoque: loadEstoque,
+    documentos: loadDocumentos,
+    reunioes: loadReunioes,
+    pendencias: loadPendenciasGerais,
+    auditoria: loadAuditoria,
+    usuarios: loadUsuarios,
+  };
+  if (loaders[id]) loaders[id]();
+}
+
+// ============================================================
+// PARCELAS
+// ============================================================
+async function abrirModalParcela() {
+  const { data: clientes } = await sbClient.from('clientes').select('*, unidades(numero)').order('nome');
+  const sel = document.getElementById('parcelaCliente');
+  sel.innerHTML = '<option value="">Selecionar cliente...</option>';
+  if (clientes) clientes.forEach(c => { sel.innerHTML += `<option value="${c.id}" data-unidade="${c.unidade_id}" data-apt="${c.unidades?.numero||''}">${c.nome} — Apt ${c.unidades?.numero||'—'}</option>`; });
+  openModal('modalParcela');
+}
+
+async function preencherDadosParcela() {
+  const sel = document.getElementById('parcelaCliente');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) return;
+  const { data: fin } = await sbClient.from('financeiro_unidade').select('*').eq('unidade_id', opt.dataset.unidade).single();
+  if (fin) {
+    document.getElementById('parcelaValorTotal').value = fin.valor_venda || '';
+    document.getElementById('parcelaEntrada').value = fin.entrada || '';
+    document.getElementById('parcelaNumero').value = fin.num_parcelas || '';
+    document.getElementById('parcelaInfoCliente').textContent = `Apartamento ${opt.dataset.apt} · Financeiro já cadastrado.`;
+  } else {
+    document.getElementById('parcelaInfoCliente').textContent = `Apartamento ${opt.dataset.apt} · Nenhum financeiro cadastrado ainda.`;
+  }
+  atualizarPreviewParcela();
+}
+
+function atualizarPreviewParcela() {
+  const total = parseFloat(document.getElementById('parcelaValorTotal').value)||0;
+  const entrada = parseFloat(document.getElementById('parcelaEntrada').value)||0;
+  const num = parseInt(document.getElementById('parcelaNumero').value)||0;
+  const prev = document.getElementById('parcelaPreview');
+  if (total && num) {
+    const saldo = total - entrada;
+    const vlrParcela = saldo / num;
+    prev.innerHTML = `Saldo após entrada: <strong style="color:var(--gold)">R$ ${saldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong> · Valor de cada parcela: <strong style="color:var(--gold)">R$ ${vlrParcela.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong> · Total: ${num} parcelas`;
+  } else {
+    prev.textContent = 'Preencha os campos para ver o resumo.';
+  }
+}
+
+// Atualizar preview ao digitar
+setTimeout(()=>{
+  ['parcelaValorTotal','parcelaEntrada','parcelaNumero'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', atualizarPreviewParcela);
+  });
+},500);
+
+async function gerarParcelas() {
+  const sel = document.getElementById('parcelaCliente');
+  const clienteId = sel.value;
+  const opt = sel.options[sel.selectedIndex];
+  if (!clienteId) { showToast('Selecione um cliente.','err'); return; }
+  const valorTotal = parseFloat(document.getElementById('parcelaValorTotal').value)||0;
+  const entrada = parseFloat(document.getElementById('parcelaEntrada').value)||0;
+  const numParcelas = parseInt(document.getElementById('parcelaNumero').value)||0;
+  const primVenc = document.getElementById('parcelaPrimeiro').value;
+  if (!valorTotal || !numParcelas || !primVenc) { showToast('Preencha valor total, número de parcelas e vencimento.','err'); return; }
+  const unidadeId = opt.dataset.unidade;
+  const saldo = valorTotal - entrada;
+  const vlrParcela = parseFloat((saldo/numParcelas).toFixed(2));
+
+  // Salvar financeiro da unidade
+  const { data: finExist } = await sbClient.from('financeiro_unidade').select('id').eq('unidade_id',unidadeId).single();
+  const finData = { unidade_id: unidadeId, valor_venda: valorTotal, entrada, num_parcelas: numParcelas, saldo_devedor: saldo };
+  if (finExist) await sbClient.from('financeiro_unidade').update(finData).eq('id',finExist.id);
+  else await sbClient.from('financeiro_unidade').insert(finData);
+
+  // Deletar parcelas existentes e recriar
+  await sbClient.from('parcelas').delete().eq('unidade_id',unidadeId);
+
+  const parcelas = [];
+  const base = new Date(primVenc+'T12:00:00');
+  for (let i = 0; i < numParcelas; i++) {
+    const venc = new Date(base);
+    venc.setMonth(venc.getMonth()+i);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const st = venc < today ? 'atrasado' : 'pendente';
+    parcelas.push({ unidade_id: unidadeId, cliente_id: clienteId, numero: i+1, valor: vlrParcela, vencimento: venc.toISOString().split('T')[0], status: st });
+  }
+
+  const { error } = await sbClient.from('parcelas').insert(parcelas);
+  if (error) { showToast('Erro ao gerar parcelas: '+error.message,'err'); return; }
+  await logAudit('parcelas','INSERT',unidadeId,null,{total:numParcelas,valor:vlrParcela});
+  closeModal('modalParcela');
+  showToast(`${numParcelas} parcelas geradas com sucesso!`,'ok');
+  loadFinanceiro();
+}
+
+// ============================================================
+// AUDITORIA
+// ============================================================
+async function logAudit(tabela, operacao, registroId, dadoAnterior, dadoNovo) {
+  if (!sbClient || !currentUser) return;
+  await sbClient.from('auditoria').insert({
+    usuario_id: currentUserProfile?.id || null,
+    usuario_nome: currentUserProfile?.nome || currentUser.email,
+    tabela, operacao, registro_id: registroId,
+    dado_anterior: dadoAnterior, dado_novo: dadoNovo
+  });
+}
+
+async function loadAuditoria() {
+  const { data } = await sbClient.from('auditoria').select('*').order('criado_em', { ascending: false }).limit(100);
+  const body = document.getElementById('auditoriaBody');
+  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="ti ti-shield-check"></i>Nenhum registro ainda.</td></tr>'; return; }
+  body.innerHTML = data.map(a => {
+    const d = new Date(a.criado_em);
+    const dt = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    const opCls = a.operacao==='INSERT'?'badge-ok':a.operacao==='DELETE'?'badge-danger':'badge-warn';
+    return `<tr><td>${dt}</td><td>${a.usuario_nome||'—'}</td><td style="font-family:monospace;font-size:11px;">${a.tabela}</td><td><span class="status-badge ${opCls}">${a.operacao}</span></td><td style="font-family:monospace;font-size:11px;color:var(--text-dim);">${a.registro_id?.substring(0,8)||'—'}</td></tr>`;
+  }).join('');
+}
+
+// ============================================================
+// CLIENTES
+// ============================================================
+async function loadClientes() {
+  const { data: unidades } = await sbClient.from('unidades').select('*').order('numero');
+  if (!unidades) return;
+  const vendidas = unidades.filter(u=>u.status==='vendida').length;
+  const reservadas = unidades.filter(u=>u.status==='reservada').length;
+  const disponiveis = unidades.filter(u=>u.status==='disponivel').length;
+  document.getElementById('kpiVendidas').textContent = vendidas;
+  document.getElementById('kpiDisponiveis').textContent = disponiveis;
+  document.getElementById('kpiReservadas').textContent = reservadas;
+  buildUnitGrid(unidades);
+
+  const { data: clientes } = await sbClient.from('clientes').select('*, unidades(numero,status)').order('criado_em', { ascending: false });
+  const body = document.getElementById('clientesBody');
+  if (!clientes || !clientes.length) { body.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="ti ti-building"></i>Nenhum cliente cadastrado ainda.</td></tr>'; return; }
+  body.innerHTML = clientes.map(c => {
+    const apt = c.unidades?.numero || '—';
+    const st = c.unidades?.status || 'disponivel';
+    const cls = st==='vendida'?'badge-ok':st==='reservada'?'badge-warn':'badge-gray';
+    const stLabel = st==='vendida'?'Vendida':st==='reservada'?'Reservada':'Disponível';
+    return `<tr><td style="color:var(--gold);font-weight:500;">${apt}</td><td style="color:var(--text);">${c.nome}</td><td>${c.cpf_cnpj||'—'}</td><td>${c.telefone||'—'}</td><td><span class="status-badge ${cls}">${stLabel}</span></td><td><button class="btn btn-danger btn-sm" onclick="deletarCliente('${c.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+
+  // Preencher select de unidades disponíveis
+  const sel = document.getElementById('clienteUnidade');
+  const disp = unidades.filter(u=>u.status==='disponivel');
+  sel.innerHTML = '<option value="">Selecionar unidade...</option>' + disp.map(u=>`<option value="${u.id}">${u.numero} (${u.andar}º andar)</option>`).join('');
+}
+
+function buildUnitGrid(unidades) {
+  const grid = document.getElementById('unitGrid');
+  const existing = grid.querySelectorAll('.unit-floor-label, .unit-cell');
+  existing.forEach(e=>e.remove());
+  const map = {};
+  unidades.forEach(u => map[u.numero] = u.status);
+  for (let f = 21; f >= 6; f--) {
+    const lbl = document.createElement('div');
+    lbl.className = 'unit-floor-label'; lbl.textContent = f+'º'; grid.appendChild(lbl);
+    for (let u = 1; u <= 4; u++) {
+      const num = (f*100)+u;
+      const st = map[num] || 'disponivel';
+      const cell = document.createElement('div');
+      cell.className = 'unit-cell ' + (st==='vendida'?'sold':st==='reservada'?'reserved':'');
+      cell.innerHTML = `<div class="unit-num">${num}</div><div class="unit-status-label">${st==='vendida'?'Vendido':st==='reservada'?'Reservado':'Disponível'}</div>`;
+      grid.appendChild(cell);
+    }
+  }
+}
+
+async function openModalCliente() {
+  // Carregar unidades disponíveis direto do banco na hora de abrir
+  const { data: unidades } = await sbClient.from('unidades').select('id,numero,andar').eq('status','disponivel').order('numero');
+  const sel = document.getElementById('clienteUnidade');
+  if (!unidades || !unidades.length) {
+    sel.innerHTML = '<option value="">Nenhuma unidade disponível</option>';
+  } else {
+    sel.innerHTML = '<option value="">Selecionar unidade...</option>' + unidades.map(u=>`<option value="${u.id}">${u.numero} — ${u.andar}º andar</option>`).join('');
+  }
+  openModal('modalCliente');
+}
+
+async function salvarCliente() {
+  const unidadeId = document.getElementById('clienteUnidade').value;
+  const nome = document.getElementById('clienteNome').value.trim();
+  if (!unidadeId || !nome) { showToast('Selecione a unidade e informe o nome.', 'err'); return; }
+  const payload = { unidade_id: unidadeId, nome, cpf_cnpj: document.getElementById('clienteCpf').value, telefone: document.getElementById('clienteTel').value, email: document.getElementById('clienteEmail').value };
+  const { data, error } = await sbClient.from('clientes').insert(payload).select().single();
+  if (error) { showToast('Erro ao salvar: '+error.message, 'err'); return; }
+  await sbClient.from('unidades').update({ status: 'vendida' }).eq('id', unidadeId);
+  await logAudit('clientes','INSERT', data.id, null, payload);
+  closeModal('modalCliente'); showToast('Cliente salvo com sucesso!', 'ok'); loadClientes();
+}
+
+async function deletarCliente(id) {
+  if (!confirm('Remover este cliente? A unidade voltará a ficar disponível.')) return;
+  const { data: c } = await sbClient.from('clientes').select('*').eq('id',id).single();
+  await sbClient.from('unidades').update({status:'disponivel'}).eq('id', c.unidade_id);
+  await sbClient.from('clientes').delete().eq('id', id);
+  await logAudit('clientes','DELETE', id, c, null);
+  showToast('Cliente removido.', 'ok'); loadClientes();
+}
+
+// ============================================================
+// CRONOGRAMA GLOBAL COM SUBITENS PONDERADOS
+// ============================================================
+let cronogramaAberto = {}; // quais etapas estão expandidas
+let etapasDados = [];
+let pesosDados = {};
+let subEditando = null; // {etapaId, subId ou null para novo}
+
+async function loadCronograma() {
+  const [{ data: etapas }, { data: pesos }, { data: subitens }] = await Promise.all([
+    sbClient.from('etapas_obra').select('*').order('ordem'),
+    sbClient.from('pesos_disciplinas').select('*'),
+    sbClient.from('subitens_etapa').select('*').order('ordem')
+  ]);
+  if (!etapas) return;
+  etapasDados = etapas;
+  pesosDados = {};
+  (pesos||[]).forEach(p => pesosDados[p.etapa_id] = { peso: p.peso, id: p.id });
+  renderCronograma(etapas, subitens||[]);
+}
+
+function calcPctEtapa(etapaId, subitens) {
+  const subs = subitens.filter(s => s.etapa_id === etapaId);
+  if (!subs.length) return 0;
+  let total = 0, pesoTotal = 0;
+  subs.forEach(s => { total += (parseFloat(s.percentual)||0) * (parseFloat(s.peso)||0); pesoTotal += parseFloat(s.peso)||0; });
+  return pesoTotal > 0 ? Math.round(total / pesoTotal) : 0;
+}
+
+function renderCronograma(etapas, subitens) {
+  const body = document.getElementById('ganttBody');
+  if (!etapas.length) { body.innerHTML = '<div class="empty-state">Nenhuma etapa. Execute o SQL do Bloco 5 no Supabase.</div>'; return; }
+
+  let pesoGeralTotal = 0, pctGeralTotal = 0, nOk = 0, nAnd = 0, nNao = 0;
+  etapas.forEach(e => {
+    const peso = parseFloat(pesosDados[e.id]?.peso || 0);
+    const pct = calcPctEtapa(e.id, subitens);
+    pesoGeralTotal += peso;
+    pctGeralTotal += pct * peso;
+    if (pct === 100) nOk++; else if (pct > 0) nAnd++; else nNao++;
+  });
+  const pctGeral = pesoGeralTotal > 0 ? Math.round(pctGeralTotal / pesoGeralTotal) : 0;
+  document.getElementById('kpiGeralObra').textContent = pctGeral + '%';
+  document.getElementById('kpiDisciplinasOk').textContent = nOk;
+  document.getElementById('kpiDisciplinasAnd').textContent = nAnd;
+  document.getElementById('kpiDisciplinasNao').textContent = nNao;
+
+  body.innerHTML = etapas.map(e => {
+    const peso = parseFloat(pesosDados[e.id]?.peso || 0);
+    const pct = calcPctEtapa(e.id, subitens);
+    const subs = subitens.filter(s => s.etapa_id === e.id);
+    const isOpen = cronogramaAberto[e.id];
+    const barCls = pct===100?'bar-ok':pct>0?'bar-and':'bar-vazio';
+    const pctCor = pct===100?'var(--success)':pct>0?'var(--gold)':'var(--text-muted)';
+
+    let subsHtml = '';
+    if (isOpen) {
+      subsHtml = `<div style="border-top:0.5px solid var(--border);">
+        ${subs.map(s => {
+          const sp = parseFloat(s.percentual)||0;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 1.25rem 8px 56px;border-bottom:0.5px solid rgba(201,168,76,0.06);">
+            <div style="flex:1;font-size:12px;font-family:Arial,sans-serif;color:var(--text-muted);">${s.nome}</div>
+            <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;width:32px;text-align:right;">${s.peso}%</div>
+            <div style="width:80px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:${sp}%;background:${sp===100?'var(--success)':sp>0?'var(--gold)':'var(--surface3)'};border-radius:2px;"></div>
+            </div>
+            <input type="number" value="${sp}" min="0" max="100" style="width:52px;background:var(--surface2);border:0.5px solid var(--border);border-radius:4px;padding:3px 5px;color:var(--gold);font-size:12px;font-family:Arial,sans-serif;text-align:center;outline:none;"
+              onchange="atualizarSubitem('${s.id}','${e.id}',parseFloat(this.value))" title="% concluído">
+            <span style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">%</span>
+            <button onclick="editarSubitem('${e.id}','${s.id}','${s.nome}',${s.peso},${s.percentual})" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:14px;padding:0;" title="Editar sub-etapa">
+              <i class="ti ti-pencil" aria-hidden="true"></i>
+            </button>
+          </div>`;
+        }).join('')}
+        <div style="padding:8px 1.25rem 8px 56px;">
+          <button class="btn btn-sm" onclick="novoSubitem('${e.id}','${e.nome}')" style="font-size:11px;padding:4px 10px;">
+            <i class="ti ti-plus" aria-hidden="true"></i> Adicionar sub-etapa
+          </button>
+        </div>
+      </div>`;
+    }
+
+    return `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 1.25rem;cursor:pointer;" onclick="toggleCrono('${e.id}')">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:14px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;">${e.nome}</span>
+            <span style="font-size:10px;font-family:Arial,sans-serif;color:var(--text-dim);">peso ${peso}%</span>
+          </div>
+          <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;">
+              <div class="${barCls}" style="height:100%;width:${pct}%;border-radius:3px;transition:width 0.3s;"></div>
+            </div>
+            <span style="font-size:12px;font-weight:500;color:${pctCor};font-family:Arial,sans-serif;width:36px;text-align:right;">${pct}%</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:3px;">${subs.length} sub-etapas · ${subs.filter(s=>parseFloat(s.percentual)===100).length} concluídas</div>
+        </div>
+        <i class="ti ti-chevron-${isOpen?'up':'down'}" style="color:var(--text-dim);font-size:16px;" aria-hidden="true"></i>
+      </div>
+      ${subsHtml}
+    </div>`;
+  }).join('');
+}
+
+async function toggleCrono(etapaId) {
+  cronogramaAberto[etapaId] = !cronogramaAberto[etapaId];
+  const { data: subitens } = await sbClient.from('subitens_etapa').select('*').order('ordem');
+  renderCronograma(etapasDados, subitens||[]);
+}
+
+async function atualizarSubitem(subId, etapaId, valor) {
+  if (isNaN(valor) || valor < 0) valor = 0;
+  if (valor > 100) valor = 100;
+  await sbClient.from('subitens_etapa').update({ percentual: valor, atualizado_em: new Date().toISOString() }).eq('id', subId);
+  await logAudit('subitens_etapa','UPDATE',subId,null,{percentual:valor});
+  const { data: subitens } = await sbClient.from('subitens_etapa').select('*').order('ordem');
+  renderCronograma(etapasDados, subitens||[]);
+}
+
+function editarSubitem(etapaId, subId, nome, peso, pct) {
+  subEditando = { etapaId, subId };
+  document.getElementById('modalSubitemTitle').textContent = 'Editar sub-etapa';
+  document.getElementById('subNome').value = nome;
+  document.getElementById('subPeso').value = peso;
+  document.getElementById('subPct').value = pct;
+  openModal('modalSubitem');
+}
+
+function novoSubitem(etapaId, nomeEtapa) {
+  subEditando = { etapaId, subId: null };
+  document.getElementById('modalSubitemTitle').textContent = 'Nova sub-etapa — ' + nomeEtapa;
+  document.getElementById('subNome').value = '';
+  document.getElementById('subPeso').value = '';
+  document.getElementById('subPct').value = '0';
+  openModal('modalSubitem');
+}
+
+async function salvarSubitem() {
+  const nome = document.getElementById('subNome').value.trim();
+  const peso = parseFloat(document.getElementById('subPeso').value)||0;
+  const pct = parseFloat(document.getElementById('subPct').value)||0;
+  if (!nome) { showToast('Informe o nome da sub-etapa.','err'); return; }
+  if (subEditando.subId) {
+    await sbClient.from('subitens_etapa').update({ nome, peso, percentual: pct, atualizado_em: new Date().toISOString() }).eq('id', subEditando.subId);
+    await logAudit('subitens_etapa','UPDATE',subEditando.subId,null,{nome,peso,pct});
+  } else {
+    const { data: subs } = await sbClient.from('subitens_etapa').select('ordem').eq('etapa_id',subEditando.etapaId).order('ordem',{ascending:false}).limit(1);
+    const proxOrdem = subs?.length ? subs[0].ordem + 1 : 1;
+    const { data } = await sbClient.from('subitens_etapa').insert({ etapa_id: subEditando.etapaId, nome, peso, percentual: pct, ordem: proxOrdem }).select().single();
+    await logAudit('subitens_etapa','INSERT',data?.id,null,{nome,peso,pct});
+  }
+  closeModal('modalSubitem');
+  showToast('Sub-etapa salva!','ok');
+  loadCronograma();
+}
+
+async function abrirModalPesos() {
+  const [{ data: etapas }, { data: pesos }] = await Promise.all([
+    sbClient.from('etapas_obra').select('*').order('ordem'),
+    sbClient.from('pesos_disciplinas').select('*')
+  ]);
+  const pesosMap = {};
+  (pesos||[]).forEach(p => pesosMap[p.etapa_id] = { peso: p.peso, id: p.id });
+  const form = document.getElementById('pesosForm');
+  form.innerHTML = (etapas||[]).map(e => `
+    <div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:0.5px solid var(--border);">
+      <span style="flex:1;font-size:13px;font-family:Arial,sans-serif;color:var(--text-muted);">${e.nome}</span>
+      <input type="number" value="${pesosMap[e.id]?.peso||0}" min="0" max="100" step="0.1"
+        style="width:60px;background:var(--surface2);border:0.5px solid var(--border-strong);border-radius:4px;padding:5px;color:var(--gold);font-size:13px;font-family:Arial,sans-serif;text-align:center;outline:none;"
+        oninput="atualizarTotalPesos()" data-etapa="${e.id}" data-peso-id="${pesosMap[e.id]?.id||''}">
+      <span style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">%</span>
+    </div>`).join('');
+  atualizarTotalPesos();
+  openModal('modalPesos');
+}
+
+function atualizarTotalPesos() {
+  const inputs = document.querySelectorAll('#pesosForm input[type=number]');
+  let total = 0;
+  inputs.forEach(i => total += parseFloat(i.value)||0);
+  const lbl = document.getElementById('pesosTotalLabel');
+  lbl.textContent = Math.round(total*10)/10 + '%';
+  lbl.style.color = Math.abs(total-100) < 0.5 ? 'var(--success)' : 'var(--danger)';
+}
+
+async function salvarPesos() {
+  const inputs = document.querySelectorAll('#pesosForm input[type=number]');
+  let total = 0;
+  inputs.forEach(i => total += parseFloat(i.value)||0);
+  if (Math.abs(total-100) > 1) { showToast('A soma dos pesos deve ser 100%. Atual: '+Math.round(total)+'%','err'); return; }
+  for (const input of inputs) {
+    const etapaId = input.dataset.etapa;
+    const pesoId = input.dataset.pesoId;
+    const peso = parseFloat(input.value)||0;
+    if (pesoId) {
+      await sbClient.from('pesos_disciplinas').update({ peso, atualizado_em: new Date().toISOString() }).eq('id', pesoId);
+    } else {
+      await sbClient.from('pesos_disciplinas').insert({ etapa_id: etapaId, peso });
+    }
+  }
+  closeModal('modalPesos');
+  showToast('Pesos salvos!','ok');
+  loadCronograma();
+}
+
+async function atualizarEtapa(id, campo, valor) {
+  const update = { [campo]: valor || null, atualizado_em: new Date().toISOString() };
+  await sbClient.from('etapas_obra').update(update).eq('id', id);
+  await logAudit('etapas_obra','UPDATE', id, null, update);
+  showToast('Etapa atualizada.', 'ok');
+}
+// ============================================================
+// CRONOGRAMA UNIDADES
+// ============================================================
+function buildAndarFilter() {
+  const sel = document.getElementById('filterAndar');
+  sel.innerHTML = '<option value="">Todos os andares</option>';
+  for (let f = 6; f <= 21; f++) sel.innerHTML += `<option value="${f}">${f}º andar</option>`;
+  // Preencher filtro de disciplinas
+  const discSel = document.getElementById('filterDiscExport');
+  if (discSel) {
+    discSel.innerHTML = '<option value="">Todas as disciplinas</option>' +
+      DISCIPLINAS.map(d=>`<option value="${d.id}">${d.label}</option>`).join('');
+  }
+}
+
+const DISCIPLINAS = [
+  {id:'alvenaria',label:'Alvenaria'},
+  {id:'hidraulica',label:'Hidráulica'},
+  {id:'eletrica',label:'Elétrica'},
+  {id:'impermeabilizacao',label:'Impermeabilização'},
+  {id:'reboco',label:'Reboco'},
+  {id:'contrapiso',label:'Contrapiso'},
+  {id:'gesso',label:'Gesso'},
+  {id:'revestimentos',label:'Revestimentos'},
+  {id:'pintura_interna',label:'Pintura Interna'},
+  {id:'esquadrias',label:'Esquadrias'},
+  {id:'portas',label:'Portas'},
+  {id:'rodapes',label:'Rodapés'},
+  {id:'loucas_metais',label:'Louças e Metais'},
+];
+
+let _unidadesCache = [];
+let _cronoCache = [];
+let _pendenciasCache = [];
+let _disciplinaAberta = {}; // unidadeId+disc -> bool
+
+async function loadCronogramaUnidades() {
+  const andar = document.getElementById('filterAndar').value;
+  const wrap = document.getElementById('unitScheduleWrap');
+  wrap.innerHTML = '<div class="empty-state" style="padding:2rem;text-align:center;color:var(--text-dim);font-family:Arial,sans-serif;">Carregando...</div>';
+
+  let query = sbClient.from('unidades').select('*').order('numero');
+  if (andar) query = query.eq('andar', parseInt(andar));
+  const { data: unidades } = await query;
+  if (!unidades || !unidades.length) { wrap.innerHTML = '<div class="empty-state">Nenhuma unidade encontrada.</div>'; return; }
+  _unidadesCache = unidades;
+
+  const ids = unidades.map(u=>u.id);
+  const [{ data: crono }, { data: pendencias }] = await Promise.all([
+    sbClient.from('cronograma_unidades').select('*').in('unidade_id', ids),
+    sbClient.from('pendencias_unidade').select('*').in('unidade_id', ids).eq('concluida', false)
+  ]);
+  _cronoCache = crono || [];
+  _pendenciasCache = pendencias || [];
+
+  renderUnidades(unidades);
+}
+
+function renderUnidades(unidades) {
+  const wrap = document.getElementById('unitScheduleWrap');
+  const andarFiltro = document.getElementById('filterAndar').value;
+  const isSingleAndar = !!andarFiltro;
+
+  const andares = {};
+  unidades.forEach(u => {
+    if (!andares[u.andar]) andares[u.andar] = [];
+    andares[u.andar].push(u);
+  });
+
+  let html = '';
+  Object.keys(andares).sort((a,b)=>parseInt(b)-parseInt(a)).forEach(andar => {
+    const units = andares[andar];
+    if (isSingleAndar) {
+      // Layout andar único: 2x2 + corredor centralizado embaixo
+      const u1 = units.find(x=>x.posicao===1);
+      const u2 = units.find(x=>x.posicao===2);
+      const u3 = units.find(x=>x.posicao===3);
+      const u4 = units.find(x=>x.posicao===4);
+      html += `<div style="margin-bottom:1.5rem;">
+        <div style="font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);font-family:Arial,sans-serif;margin-bottom:0.75rem;">${andar}º andar</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          ${u1?renderCardUnidade(u1,true):'<div></div>'}
+          ${u2?renderCardUnidade(u2,true):'<div></div>'}
+          ${u3?renderCardUnidade(u3,true):'<div></div>'}
+          ${u4?renderCardUnidade(u4,true):'<div></div>'}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+          ${renderCardCorredor(andar, true)}
+        </div>
+      </div>`;
+    } else {
+      // Layout todos os andares: linha com 4 unidades + corredor menores
+      html += `<div style="margin-bottom:1rem;">
+        <div style="font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);font-family:Arial,sans-serif;margin-bottom:0.4rem;">${andar}º andar</div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;">`;
+      for (let pos = 1; pos <= 4; pos++) {
+        const u = units.find(x=>x.posicao===pos);
+        if (u) html += renderCardUnidade(u, false);
+        else html += '<div></div>';
+      }
+      html += renderCardCorredor(andar, false);
+      html += '</div></div>';
+    }
+  });
+
+  wrap.innerHTML = html;
+}
+
+function renderCardCorredor(andar, large) {
+  const pendCorredor = _pendenciasCache.filter(p=>p.corredor_andar===parseInt(andar)).length;
+  const cronoCorr = _cronoCache.filter(c=>c.corredor_andar===parseInt(andar));
+  const pcts = DISCIPLINAS.map(d=>{
+    const item = cronoCorr.find(c=>c.disciplina===d.id);
+    return parseFloat(item?.percentual||0);
+  });
+  const avg = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/DISCIPLINAS.length) : 0;
+  const cor = avg===100?'var(--success)':avg>0?'var(--gold)':'var(--text-dim)';
+
+  if (large) {
+    return `<div style="background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-lg);padding:14px 12px;cursor:pointer;display:flex;align-items:center;gap:12px;" onclick="abrirDetalheCorredor(${andar})">
+      <i class="ti ti-arrows-horizontal" style="font-size:24px;color:var(--gold);flex-shrink:0;" aria-hidden="true"></i>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;">Corredor ${andar}º</div>
+        <div style="height:4px;background:var(--surface3);border-radius:2px;margin:6px 0;overflow:hidden;">
+          <div style="height:100%;width:${avg}%;background:${cor};border-radius:2px;"></div>
+        </div>
+        <div style="font-size:12px;color:${cor};font-family:Arial,sans-serif;">${avg}%${pendCorredor>0?' · <span style=color:var(--danger)>'+pendCorredor+' pendência'+(pendCorredor>1?'s':'')+'</span>':''}</div>
+      </div>
+    </div>`;
+  } else {
+    return `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:6px 4px;cursor:pointer;text-align:center;" onclick="abrirDetalheCorredor(${andar})">
+      <i class="ti ti-arrows-horizontal" style="font-size:14px;color:var(--text-dim);" aria-hidden="true"></i>
+      <div style="font-size:8px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;">Corr.</div>
+      <div style="font-size:10px;font-weight:500;color:${cor};font-family:Arial,sans-serif;">${avg}%</div>
+      ${pendCorredor>0?`<div style="font-size:8px;color:var(--danger);font-family:Arial,sans-serif;">${pendCorredor}⚠</div>`:''}
+    </div>`;
+  }
+}
+
+function renderCardUnidade(u, large=true) {
+  const crono = _cronoCache.filter(c=>c.unidade_id===u.id);
+  const pcts = DISCIPLINAS.map(d=>{
+    const item = crono.find(c=>c.disciplina===d.id);
+    return parseFloat(item?.percentual||0);
+  });
+  const avg = Math.round(pcts.reduce((a,b)=>a+b,0)/DISCIPLINAS.length);
+  const cor = avg===100?'var(--success)':avg>0?'var(--gold)':'var(--text-dim)';
+  const pendCount = _pendenciasCache.filter(p=>p.unidade_id===u.id).length;
+  const stCls = u.status==='vendida'?'badge-ok':u.status==='reservada'?'badge-warn':'badge-gray';
+  const stLbl = u.status==='vendida'?'Vendida':u.status==='reservada'?'Reservada':'Disponível';
+
+  if (large) {
+    return `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 12px;cursor:pointer;" onclick="abrirDetalheUnidade('${u.id}','${u.numero}')">
+      <div style="font-size:18px;font-weight:500;color:var(--gold);font-family:Arial,sans-serif;text-align:center;">${u.numero}</div>
+      <div style="text-align:center;margin:6px 0;"><span class="status-badge ${stCls}" style="font-size:10px;">${stLbl}</span></div>
+      <div style="height:5px;background:var(--surface3);border-radius:3px;margin:8px 0;overflow:hidden;">
+        <div style="height:100%;width:${avg}%;background:${cor};border-radius:3px;"></div>
+      </div>
+      <div style="text-align:center;font-size:14px;font-weight:500;color:${cor};font-family:Arial,sans-serif;">${avg}%</div>
+      ${pendCount>0?`<div style="text-align:center;margin-top:6px;"><span style="font-size:10px;background:rgba(226,75,74,0.15);color:var(--danger);padding:3px 8px;border-radius:3px;font-family:Arial,sans-serif;">${pendCount} pendência${pendCount>1?'s':''}</span></div>`:''}
+    </div>`;
+  } else {
+    return `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:6px;padding:6px 4px;cursor:pointer;" onclick="abrirDetalheUnidade('${u.id}','${u.numero}')">
+      <div style="font-size:11px;font-weight:500;color:var(--gold);font-family:Arial,sans-serif;text-align:center;">${u.numero}</div>
+      <div style="height:3px;background:var(--surface3);border-radius:2px;margin:4px 0;overflow:hidden;">
+        <div style="height:100%;width:${avg}%;background:${cor};border-radius:2px;"></div>
+      </div>
+      <div style="text-align:center;font-size:10px;font-weight:500;color:${cor};font-family:Arial,sans-serif;">${avg}%</div>
+      ${pendCount>0?`<div style="text-align:center;margin-top:2px;font-size:8px;color:var(--danger);font-family:Arial,sans-serif;">${pendCount}⚠</div>`:''}
+    </div>`;
+  }
+}
+
+async function abrirDetalheUnidade(unidadeId, numero) {
+  // Carregar dados frescos
+  const [{ data: crono }, { data: pendencias }] = await Promise.all([
+    sbClient.from('cronograma_unidades').select('*').eq('unidade_id', unidadeId),
+    sbClient.from('pendencias_unidade').select('*').eq('unidade_id', unidadeId).order('criado_em')
+  ]);
+
+  // Montar conteúdo do modal
+  document.getElementById('modalUnidadeTitle').textContent = 'Apartamento ' + numero;
+  document.getElementById('modalUnidadeBody').innerHTML = DISCIPLINAS.map(d => {
+    const item = crono?.find(c=>c.disciplina===d.id);
+    const pct = parseFloat(item?.percentual||0);
+    const cronoId = item?.id || null;
+    const pends = (pendencias||[]).filter(p=>p.disciplina===d.id && !p.concluida);
+    const pctCor = pct===100?'var(--success)':pct>0?'var(--gold)':'var(--text-muted)';
+
+    return `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;" onclick="toggleDiscDetalhe('${unidadeId}','${d.id}')">
+        <span style="flex:1;font-size:13px;font-weight:500;font-family:Arial,sans-serif;color:var(--text);">${d.label}</span>
+        ${pends.length>0?`<span style="font-size:10px;background:rgba(226,75,74,0.15);color:var(--danger);padding:2px 7px;border-radius:3px;font-family:Arial,sans-serif;">${pends.length} pendência${pends.length>1?'s':''}</span>`:''}
+        <span style="font-size:14px;font-weight:500;color:${pctCor};font-family:Arial,sans-serif;">${pct}%</span>
+        <i class="ti ti-chevron-down" style="color:var(--text-dim);font-size:14px;" aria-hidden="true"></i>
+      </div>
+      <div id="disc-${unidadeId}-${d.id}" style="display:none;border-top:0.5px solid var(--border);padding:14px;">
+        <!-- SLIDER -->
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;">% Concluído</span>
+            <span style="font-size:16px;font-weight:500;color:${pctCor};font-family:Arial,sans-serif;" id="sliderVal-${unidadeId}-${d.id}">${pct}%</span>
+          </div>
+          <input type="range" min="0" max="100" step="10" value="${pct}"
+            style="width:100%;accent-color:var(--gold);"
+            oninput="atualizarSlider('${unidadeId}','${d.id}','${cronoId||''}',this.value)">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;">
+            <span>0</span><span>50</span><span>100</span>
+          </div>
+        </div>
+        <!-- PENDÊNCIAS -->
+        <div style="margin-bottom:10px;">
+          <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Pendências</div>
+          <div id="pendList-${unidadeId}-${d.id}">
+            ${pends.map(p=>`
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:8px;background:var(--surface);border-radius:6px;margin-bottom:6px;border:0.5px solid var(--border);">
+                <div style="flex:1;">
+                  <div style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;">${p.descricao}</div>
+                  ${p.foto_url?`<img src="${p.foto_url}" style="max-width:100%;max-height:120px;border-radius:4px;margin-top:6px;object-fit:cover;" alt="foto pendência">`:''}
+                </div>
+                <button onclick="concluirPendencia('${p.id}','${unidadeId}','${numero}')" title="Marcar como concluída"
+                  style="background:none;border:0.5px solid rgba(29,158,117,0.3);border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--success);font-size:14px;flex-shrink:0;">
+                  <i class="ti ti-check" aria-hidden="true"></i>
+                </button>
+              </div>`).join('')}
+            ${pends.length===0?'<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;padding:4px 0;">Nenhuma pendência.</div>':''}
+          </div>
+          <!-- Nova pendência -->
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+            <input type="text" placeholder="Descrever pendência..." id="novaPend-${unidadeId}-${d.id}"
+              style="width:100%;background:var(--surface);border:0.5px solid var(--border-strong);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Arial,sans-serif;outline:none;">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="file" accept="image/*" id="fotoInput-${unidadeId}-${d.id}"
+                style="flex:1;font-size:11px;font-family:Arial,sans-serif;color:var(--text-muted);background:var(--surface);border:0.5px solid var(--border);border-radius:6px;padding:5px;">
+              <button onclick="adicionarPendencia('${unidadeId}','${d.id}','${numero}')"
+                style="background:var(--gold);border:none;border-radius:6px;padding:7px 14px;cursor:pointer;color:var(--black);font-size:12px;font-family:Arial,sans-serif;font-weight:600;white-space:nowrap;">
+                + Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  openModal('modalUnidade');
+}
+
+async function abrirDetalheCorredor(andar) {
+  const label = `Corredor ${andar}º andar`;
+  const corredorKey = `corredor_${andar}`;
+  const [{ data: crono }, { data: pendencias }] = await Promise.all([
+    sbClient.from('cronograma_unidades').select('*').eq('corredor_andar', andar),
+    sbClient.from('pendencias_unidade').select('*').eq('corredor_andar', andar).order('criado_em')
+  ]);
+
+  document.getElementById('modalUnidadeTitle').textContent = label;
+  document.getElementById('modalUnidadeBody').innerHTML = DISCIPLINAS.map(d => {
+    const item = crono?.find(c=>c.disciplina===d.id);
+    const pct = parseFloat(item?.percentual||0);
+    const cronoId = item?.id || null;
+    const pends = (pendencias||[]).filter(p=>p.disciplina===d.id && !p.concluida);
+    const pctCor = pct===100?'var(--success)':pct>0?'var(--gold)':'var(--text-muted)';
+
+    return `<div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;" onclick="toggleDiscDetalhe('corredor_${andar}','${d.id}')">
+        <span style="flex:1;font-size:13px;font-weight:500;font-family:Arial,sans-serif;color:var(--text);">${d.label}</span>
+        ${pends.length>0?`<span style="font-size:10px;background:rgba(226,75,74,0.15);color:var(--danger);padding:2px 7px;border-radius:3px;font-family:Arial,sans-serif;">${pends.length} pendência${pends.length>1?'s':''}</span>`:''}
+        <span style="font-size:14px;font-weight:500;color:${pctCor};font-family:Arial,sans-serif;">${pct}%</span>
+        <i class="ti ti-chevron-down" style="color:var(--text-dim);font-size:14px;" aria-hidden="true"></i>
+      </div>
+      <div id="disc-corredor_${andar}-${d.id}" style="display:none;border-top:0.5px solid var(--border);padding:14px;">
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;">% Concluído</span>
+            <span style="font-size:16px;font-weight:500;color:${pctCor};font-family:Arial,sans-serif;" id="sliderVal-corredor_${andar}-${d.id}">${pct}%</span>
+          </div>
+          <input type="range" min="0" max="100" step="10" value="${pct}"
+            style="width:100%;accent-color:var(--gold);"
+            oninput="atualizarSliderCorredor(${andar},'${d.id}','${cronoId||''}',this.value)">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;">
+            <span>0</span><span>50</span><span>100</span>
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Pendências</div>
+          <div id="pendList-corredor_${andar}-${d.id}">
+            ${pends.map(p=>`
+              <div style="display:flex;align-items:flex-start;gap:8px;padding:8px;background:var(--surface);border-radius:6px;margin-bottom:6px;border:0.5px solid var(--border);">
+                <div style="flex:1;">
+                  <div style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;">${p.descricao}</div>
+                  ${p.foto_url?`<img src="${p.foto_url}" style="max-width:100%;max-height:120px;border-radius:4px;margin-top:6px;object-fit:cover;" alt="foto">`:''}
+                </div>
+                <button onclick="concluirPendenciaCorredor('${p.id}',${andar})" title="Concluir"
+                  style="background:none;border:0.5px solid rgba(29,158,117,0.3);border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--success);font-size:14px;flex-shrink:0;">
+                  <i class="ti ti-check" aria-hidden="true"></i>
+                </button>
+              </div>`).join('')}
+            ${pends.length===0?'<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;padding:4px 0;">Nenhuma pendência.</div>':''}
+          </div>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+            <input type="text" placeholder="Descrever pendência..." id="novaPendCorr-${andar}-${d.id}"
+              style="width:100%;background:var(--surface);border:0.5px solid var(--border-strong);border-radius:6px;padding:7px 10px;color:var(--text);font-size:12px;font-family:Arial,sans-serif;outline:none;">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="file" accept="image/*" id="fotoCorr-${andar}-${d.id}"
+                style="flex:1;font-size:11px;font-family:Arial,sans-serif;color:var(--text-muted);background:var(--surface);border:0.5px solid var(--border);border-radius:6px;padding:5px;">
+              <button onclick="adicionarPendenciaCorredor(${andar},'${d.id}')"
+                style="background:var(--gold);border:none;border-radius:6px;padding:7px 14px;cursor:pointer;color:var(--black);font-size:12px;font-family:Arial,sans-serif;font-weight:600;white-space:nowrap;">
+                + Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  openModal('modalUnidade');
+}
+
+async function atualizarSliderCorredor(andar, disciplina, cronoId, valor) {
+  valor = Math.round(parseInt(valor)/10)*10;
+  const pctCor = valor===100?'var(--success)':valor>0?'var(--gold)':'var(--text-muted)';
+  const lbl = document.getElementById(`sliderVal-corredor_${andar}-${disciplina}`);
+  if (lbl) { lbl.textContent = valor+'%'; lbl.style.color = pctCor; }
+  const status = valor===100?'concluido':valor>0?'em_andamento':'nao_iniciado';
+  if (cronoId && cronoId !== 'null' && cronoId !== '') {
+    await sbClient.from('cronograma_unidades').update({percentual:valor,status,atualizado_em:new Date().toISOString()}).eq('id',cronoId);
+  } else {
+    await sbClient.from('cronograma_unidades').insert({corredor_andar:andar,disciplina,percentual:valor,status});
+  }
+}
+
+async function adicionarPendenciaCorredor(andar, disciplina) {
+  const input = document.getElementById(`novaPendCorr-${andar}-${disciplina}`);
+  const fotoInput = document.getElementById(`fotoCorr-${andar}-${disciplina}`);
+  const descricao = input?.value.trim();
+  if (!descricao) { showToast('Descreva a pendência.','err'); return; }
+  let foto_url = null;
+  if (fotoInput?.files[0]) {
+    const file = fotoInput.files[0];
+    const path = `pendencias/corredor_${andar}/${disciplina}/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+    const { error: upErr } = await sbClient.storage.from('documentos').upload(path, file);
+    if (!upErr) {
+      const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
+      foto_url = publicUrl;
+    }
+  }
+  await sbClient.from('pendencias_unidade').insert({ corredor_andar:andar, disciplina, descricao, foto_url, concluida:false });
+  showToast('Pendência adicionada!','ok');
+  input.value = '';
+  if (fotoInput) fotoInput.value = '';
+  abrirDetalheCorredor(andar);
+}
+
+async function concluirPendenciaCorredor(pendId, andar) {
+  await sbClient.from('pendencias_unidade').update({concluida:true}).eq('id',pendId);
+  showToast('Pendência concluída!','ok');
+  abrirDetalheCorredor(andar);
+  loadCronogramaUnidades();
+}
+
+function toggleDiscDetalhe(unidadeId, discId) {
+  const el = document.getElementById(`disc-${unidadeId}-${discId}`);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function atualizarSlider(unidadeId, disciplina, cronoId, valor) {
+  valor = Math.round(parseInt(valor)/10)*10; // garantir múltiplo de 10
+  const pctCor = valor===100?'var(--success)':valor>0?'var(--gold)':'var(--text-muted)';
+  const lbl = document.getElementById(`sliderVal-${unidadeId}-${disciplina}`);
+  if (lbl) { lbl.textContent = valor+'%'; lbl.style.color = pctCor; }
+  const status = valor===100?'concluido':valor>0?'em_andamento':'nao_iniciado';
+  if (cronoId && cronoId !== 'null' && cronoId !== '') {
+    await sbClient.from('cronograma_unidades').update({percentual:valor,status,atualizado_em:new Date().toISOString()}).eq('id',cronoId);
+  } else {
+    const {data} = await sbClient.from('cronograma_unidades').insert({unidade_id:unidadeId,disciplina,percentual:valor,status}).select().single();
+    // atualizar id no slider para próximas edições
+    if (data) {
+      const slider = document.querySelector(`input[oninput*="${unidadeId}"][oninput*="${disciplina}"]`);
+      if (slider) slider.setAttribute('oninput', `atualizarSlider('${unidadeId}','${disciplina}','${data.id}',this.value)`);
+    }
+  }
+}
+
+async function adicionarPendencia(unidadeId, disciplina, numero) {
+  const input = document.getElementById(`novaPend-${unidadeId}-${disciplina}`);
+  const fotoInput = document.getElementById(`fotoInput-${unidadeId}-${disciplina}`);
+  const descricao = input?.value.trim();
+  if (!descricao) { showToast('Descreva a pendência.','err'); return; }
+  let foto_url = null;
+  if (fotoInput?.files[0]) {
+    const file = fotoInput.files[0];
+    const path = `pendencias/${unidadeId}/${disciplina}/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+    const { error: upErr } = await sbClient.storage.from('documentos').upload(path, file);
+    if (!upErr) {
+      const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
+      foto_url = publicUrl;
+    }
+  }
+  const { error } = await sbClient.from('pendencias_unidade').insert({ unidade_id:unidadeId, disciplina, descricao, foto_url, concluida:false });
+  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  showToast('Pendência adicionada!','ok');
+  input.value = '';
+  if (fotoInput) fotoInput.value = '';
+  abrirDetalheUnidade(unidadeId, numero);
+}
+
+async function concluirPendencia(pendId, unidadeId, numero) {
+  await sbClient.from('pendencias_unidade').update({concluida:true}).eq('id',pendId);
+  showToast('Pendência concluída!','ok');
+  abrirDetalheUnidade(unidadeId, numero);
+  loadCronogramaUnidades();
+}
+
+function filtrarPendencias() {}
+
+async function exportarPendencias() {
+  const discFiltro = document.getElementById('filterDiscExport').value;
+  let query = sbClient.from('pendencias_unidade').select('*, unidades(numero,andar)').eq('concluida',false).order('disciplina');
+  if (discFiltro) query = query.eq('disciplina', discFiltro);
+  const { data } = await query;
+  if (!data || !data.length) { showToast('Nenhuma pendência aberta encontrada.','ok'); return; }
+  const discLabel = {};
+  DISCIPLINAS.forEach(d => discLabel[d.id]=d.label);
+  const w = window.open('','_blank');
+  const date = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const discFiltroLabel = discFiltro ? discLabel[discFiltro] : 'Todas as disciplinas';
+  const rows = data.map(p=>`<tr><td>${p.unidades?.numero||'—'}</td><td>${p.unidades?.andar||'—'}º</td><td>${discLabel[p.disciplina]||p.disciplina}</td><td>${p.descricao}</td><td>${p.foto_url?`<a href="${p.foto_url}" target="_blank">Ver foto</a>`:'—'}</td></tr>`).join('');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Pendências</title>
+<style>body{font-family:Arial,sans-serif;font-size:12px;padding:2rem;}h1{font-size:16px;margin-bottom:4px;}p{font-size:11px;color:#888;margin-bottom:1.5rem;}table{width:100%;border-collapse:collapse;}th{background:#1A1A1A;color:#C9A84C;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;}td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px;}tr:nth-child(even) td{background:#f9f9f9;}.footer{margin-top:2rem;font-size:10px;color:#aaa;text-align:center;}</style>
+</head><body>
+<h1>Relatório de Pendências — Mônaco Residence</h1>
+<p>${discFiltroLabel} · Gerado em ${date} · ${data.length} pendência(s) abertas</p>
+<table><thead><tr><th>Apt</th><th>Andar</th><th>Disciplina</th><th>Pendência</th><th>Foto</th></tr></thead><tbody>${rows}</tbody></table>
+<div class="footer">STT Construtora e Incorporadora · Av. Nereu Ramos, 1271 · Chapecó, SC</div>
+<div style="margin-top:1rem;text-align:center;"><button onclick="window.print()" style="padding:10px 24px;background:#C9A84C;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Imprimir / Salvar PDF</button></div>
+</body></html>`);
+  w.document.close();
+}
+
+async function toggleDisciplina(unidadeId, disciplina, novoStatus) {
+  const pct = novoStatus==='concluido'?100:novoStatus==='em_andamento'?50:0;
+  const { data: existing } = await sbClient.from('cronograma_unidades').select('id').eq('unidade_id',unidadeId).eq('disciplina',disciplina).single();
+  if (existing) {
+    await sbClient.from('cronograma_unidades').update({status:novoStatus,percentual:pct,atualizado_em:new Date().toISOString()}).eq('id',existing.id);
+  } else {
+    await sbClient.from('cronograma_unidades').insert({unidade_id:unidadeId,disciplina,status:novoStatus,percentual:pct});
+  }
+  await logAudit('cronograma_unidades','UPDATE',unidadeId,null,{disciplina,status:novoStatus});
+  loadCronogramaUnidades();
+}
+
+// ============================================================
+// ETAPAS ADMINISTRATIVAS
+// ============================================================
+async function loadEtapas() {
+  const { data } = await sbClient.from('etapas_administrativas').select('*').order('modulo');
+  const grid = document.getElementById('etapasGrid');
+  grid.innerHTML = '';
+  if (!data) return;
+  const modulos = ['legal','comercial','obra','entrega'];
+  const labModulo = {legal:'Legal',comercial:'Comercial',obra:'Obra',entrega:'Entrega'};
+  modulos.forEach(mod => {
+    const items = data.filter(e=>e.modulo===mod);
+    if (!items.length) return;
+    const card = document.createElement('div');
+    card.className = 'table-wrap'; card.style.cssText = 'border-radius:12px;overflow:hidden;';
+    let html = `<div class="table-header"><span class="table-title">${labModulo[mod]}</span></div><div style="padding:0.5rem 0;">`;
+    items.forEach(item => {
+      const cls = item.status==='concluido'?'badge-ok':item.status==='em_andamento'?'badge-warn':'badge-gray';
+      const lbl = item.status==='concluido'?'Concluído':item.status==='em_andamento'?'Em andamento':'Não iniciado';
+      const next = item.status==='concluido'?'em_andamento':item.status==='em_andamento'?'concluido':'em_andamento';
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 1.25rem;border-bottom:0.5px solid rgba(201,168,76,0.06);font-size:13px;font-family:Arial,sans-serif;color:var(--text-muted);">${item.nome}<div style="display:flex;gap:6px;align-items:center;"><span class="status-badge ${cls}" style="cursor:pointer;" onclick="toggleEtapa('${item.id}','${next}')">${lbl}</span></div></div>`;
+    });
+    html += '</div>'; card.innerHTML = html; grid.appendChild(card);
+  });
+}
+
+async function toggleEtapa(id, nextStatus) {
+  await sbClient.from('etapas_administrativas').update({ status: nextStatus, atualizado_em: new Date().toISOString() }).eq('id', id);
+  await logAudit('etapas_administrativas','UPDATE',id,null,{status:nextStatus});
+  showToast('Status atualizado.','ok'); loadEtapas();
+}
+
+// ============================================================
+// FINANCEIRO
+// ============================================================
+async function loadFinanceiro() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7 = new Date(today); in7.setDate(in7.getDate()+7);
+  const { data: contas } = await sbClient.from('contas_pagar').select('*').order('vencimento');
+  const { data: parcelas } = await sbClient.from('parcelas').select('*, clientes(nome), unidades(numero)').order('vencimento');
+  const pending = contas?.filter(c=>c.status==='pendente')||[];
+  const vencendo = pending.filter(c=>new Date(c.vencimento+'T12:00:00')<=in7).length;
+  const aPagar = pending.reduce((s,c)=>s+parseFloat(c.valor||0),0);
+  const aReceber = parcelas?.filter(p=>p.status==='pendente').reduce((s,p)=>s+parseFloat(p.valor||0),0)||0;
+  const atrasadas = parcelas?.filter(p=>p.status==='atrasado').length||0;
+  document.getElementById('kpiAPagar').textContent = 'R$ '+aPagar.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  document.getElementById('kpiAReceber').textContent = 'R$ '+aReceber.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  document.getElementById('kpiAtrasadas').textContent = atrasadas;
+  document.getElementById('kpiVencendo').textContent = vencendo;
+
+  const pb = document.getElementById('contasPagarBody');
+  if (!contas || !contas.length) { pb.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="ti ti-receipt"></i>Nenhuma conta cadastrada.</td></tr>'; }
+  else pb.innerHTML = contas.map(c => {
+    const v = new Date(c.vencimento+'T12:00:00');
+    const diff = Math.round((v-today)/(1000*60*60*24));
+    const cls = c.status==='pago'?'badge-ok':diff<0?'badge-danger':diff<=3?'badge-danger':diff<=7?'badge-warn':'badge-gray';
+    const lbl = c.status==='pago'?'Pago':diff<0?'Vencido':diff===0?'Vence hoje':diff<=3?diff+' dias':'Pendente';
+    return `<tr><td>${c.fornecedor_nome||'—'}</td><td>${c.categoria}</td><td>${c.descricao||'—'}</td><td>R$ ${parseFloat(c.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td>${v.toLocaleDateString('pt-BR')}</td><td><span class="status-badge ${cls}">${lbl}</span></td><td style="display:flex;gap:4px;">${c.status!=='pago'?`<button class="btn btn-sm badge-ok" style="color:var(--success);border-color:rgba(29,158,117,0.3);padding:4px 8px;" onclick="marcarPago('${c.id}')"><i class="ti ti-check"></i></button>`:''}<button class="btn btn-danger btn-sm" style="padding:4px 8px;" onclick="deletarConta('${c.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+
+  const prb = document.getElementById('parcelasBody');
+  if (!parcelas || !parcelas.length) { prb.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="ti ti-cash"></i>Nenhuma parcela cadastrada.</td></tr>'; }
+  else prb.innerHTML = parcelas.map(p => {
+    const v = new Date(p.vencimento+'T12:00:00');
+    const diff = Math.round((v-today)/(1000*60*60*24));
+    const cls = p.status==='pago'?'badge-ok':diff<0||p.status==='atrasado'?'badge-danger':diff<=7?'badge-warn':'badge-gray';
+    const lbl = p.status==='pago'?'Pago':diff<0?'Atrasado':diff===0?'Vence hoje':diff<=7?diff+' dias':'Pendente';
+    return `<tr><td>${p.clientes?.nome||'—'}</td><td style="color:var(--gold)">${p.unidades?.numero||'—'}</td><td>${p.numero}</td><td>R$ ${parseFloat(p.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td>${v.toLocaleDateString('pt-BR')}</td><td><span class="status-badge ${cls}">${lbl}</span></td><td></td></tr>`;
+  }).join('');
+
+  // Badges sidebar
+  if (vencendo > 0) { document.getElementById('badgeContas').textContent = vencendo; document.getElementById('badgeContas').style.display = ''; }
+  if (atrasadas > 0) { document.getElementById('badgeInadimplencia').textContent = atrasadas; document.getElementById('badgeInadimplencia').style.display = ''; }
+}
+
+function showFinTab(tab) {
+  document.getElementById('finTablePagar').style.display = tab==='pagar'?'block':'none';
+  document.getElementById('finTableReceber').style.display = tab==='receber'?'block':'none';
+  document.getElementById('tabPagar').className = tab==='pagar'?'btn btn-primary btn-sm':'btn btn-sm';
+  document.getElementById('tabReceber').className = tab==='receber'?'btn btn-primary btn-sm':'btn btn-sm';
+}
+
+async function salvarContaPagar() {
+  const payload = {
+    fornecedor_nome: document.getElementById('cpFornecedor').value.trim(),
+    categoria: document.getElementById('cpCategoria').value,
+    descricao: document.getElementById('cpDescricao').value,
+    valor: parseFloat(document.getElementById('cpValor').value),
+    emissao: document.getElementById('cpEmissao').value || null,
+    vencimento: document.getElementById('cpVencimento').value,
+    status: 'pendente'
+  };
+  if (!payload.fornecedor_nome || !payload.vencimento || !payload.valor) { showToast('Preencha fornecedor, valor e vencimento.','err'); return; }
+  const { data, error } = await sbClient.from('contas_pagar').insert(payload).select().single();
+  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  await logAudit('contas_pagar','INSERT',data.id,null,payload);
+  closeModal('modalContaPagar'); showToast('Conta salva!','ok'); loadFinanceiro();
+}
+
+async function marcarPago(id) {
+  await sbClient.from('contas_pagar').update({status:'pago'}).eq('id',id);
+  await logAudit('contas_pagar','UPDATE',id,null,{status:'pago'});
+  showToast('Marcado como pago.','ok'); loadFinanceiro();
+}
+
+async function deletarConta(id) {
+  if (!confirm('Excluir esta conta?')) return;
+  const { data: c } = await sbClient.from('contas_pagar').select('*').eq('id',id).single();
+  await sbClient.from('contas_pagar').delete().eq('id',id);
+  await logAudit('contas_pagar','DELETE',id,c,null);
+  showToast('Conta removida.','ok'); loadFinanceiro();
+}
+
+// ============================================================
+// FORNECEDORES
+// ============================================================
+async function loadFornecedores() {
+  const { data } = await sbClient.from('fornecedores').select('*').order('nome');
+  const body = document.getElementById('fornecedoresBody');
+  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="ti ti-users"></i>Nenhum fornecedor cadastrado.</td></tr>'; return; }
+  body.innerHTML = data.map(f => {
+    const cls = f.status==='ativo'?'badge-ok':f.status==='encerrado'?'badge-danger':'badge-gray';
+    const lbl = f.status==='ativo'?'Ativo':f.status==='encerrado'?'Encerrado':'Aguardando';
+    const termino = f.data_termino ? new Date(f.data_termino+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}) : '—';
+    const val = f.valor_contratado ? 'R$ '+parseFloat(f.valor_contratado).toLocaleString('pt-BR',{minimumFractionDigits:0}) : '—';
+    return `<tr><td style="color:var(--text);">${f.nome}</td><td>${f.categoria}</td><td>${f.responsavel||'—'}</td><td>${val}</td><td>${termino}</td><td><span class="status-badge ${cls}">${lbl}</span></td><td><button class="btn btn-danger btn-sm" onclick="deletarFornecedor('${f.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+}
+
+async function salvarFornecedor() {
+  const payload = {
+    nome: document.getElementById('fornNome').value.trim(),
+    cpf_cnpj: document.getElementById('fornCpf').value,
+    responsavel: document.getElementById('fornResponsavel').value,
+    categoria: document.getElementById('fornCategoria').value,
+    telefone: document.getElementById('fornTel').value,
+    email: document.getElementById('fornEmail').value,
+    valor_contratado: parseFloat(document.getElementById('fornValor').value)||null,
+    status: document.getElementById('fornStatus').value,
+    data_inicio: document.getElementById('fornInicio').value||null,
+    data_termino: document.getElementById('fornTermino').value||null
+  };
+  if (!payload.nome) { showToast('Informe o nome do fornecedor.','err'); return; }
+  const { data, error } = await sbClient.from('fornecedores').insert(payload).select().single();
+  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  await logAudit('fornecedores','INSERT',data.id,null,payload);
+  closeModal('modalFornecedor'); showToast('Fornecedor salvo!','ok'); loadFornecedores();
+}
+
+async function deletarFornecedor(id) {
+  if (!confirm('Excluir este fornecedor?')) return;
+  const { data: f } = await sbClient.from('fornecedores').select('*').eq('id',id).single();
+  await sbClient.from('fornecedores').delete().eq('id',id);
+  await logAudit('fornecedores','DELETE',id,f,null);
+  showToast('Fornecedor removido.','ok'); loadFornecedores();
+}
+
+// ============================================================
+// ESTOQUE
+// ============================================================
+async function loadEstoque() {
+  const { data } = await sbClient.from('materiais').select('*').order('nome');
+  const body = document.getElementById('estoqueBody');
+  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="ti ti-package"></i>Nenhum material cadastrado.</td></tr>'; return; }
+  let criticos = 0;
+  body.innerHTML = data.map(m => {
+    const critico = parseFloat(m.estoque_atual) <= parseFloat(m.estoque_minimo);
+    const atencao = parseFloat(m.estoque_atual) <= parseFloat(m.estoque_minimo)*1.3;
+    if (critico) criticos++;
+    const cls = critico?'badge-danger':atencao?'badge-warn':'badge-ok';
+    const lbl = critico?'Crítico':atencao?'Atenção':'Normal';
+    return `<tr><td style="color:var(--text);">${m.nome}</td><td>${m.unidade_medida}</td><td>${parseFloat(m.estoque_atual).toLocaleString('pt-BR',{maximumFractionDigits:2})}</td><td>${parseFloat(m.estoque_minimo).toLocaleString('pt-BR',{maximumFractionDigits:2})}</td><td><span class="status-badge ${cls}">${lbl}</span></td><td><button class="btn btn-danger btn-sm" onclick="deletarMaterial('${m.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+  if (criticos > 0) { document.getElementById('badgeEstoque').textContent = criticos; document.getElementById('badgeEstoque').style.display = ''; }
+
+  // Popular select movimentação
+  const sel = document.getElementById('movMaterial');
+  sel.innerHTML = '<option value="">Selecionar material...</option>' + data.map(m=>`<option value="${m.id}">${m.nome} (${m.unidade_medida})</option>`).join('');
+}
+
+async function salvarMaterial() {
+  const payload = { nome: document.getElementById('matNome').value.trim(), unidade_medida: document.getElementById('matUnidade').value.trim(), estoque_minimo: parseFloat(document.getElementById('matMinimo').value)||0, estoque_atual: 0 };
+  if (!payload.nome || !payload.unidade_medida) { showToast('Preencha nome e unidade.','err'); return; }
+  const { data, error } = await sbClient.from('materiais').insert(payload).select().single();
+  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  await logAudit('materiais','INSERT',data.id,null,payload);
+  closeModal('modalMaterial'); showToast('Material cadastrado!','ok'); loadEstoque();
+}
+
+async function deletarMaterial(id) {
+  if (!confirm('Excluir este material?')) return;
+  await sbClient.from('materiais').delete().eq('id',id);
+  await logAudit('materiais','DELETE',id,null,null);
+  showToast('Material removido.','ok'); loadEstoque();
+}
+
+async function salvarMovEstoque() {
+  const matId = document.getElementById('movMaterial').value;
+  const tipo = document.getElementById('movTipo').value;
+  const qtd = parseFloat(document.getElementById('movQtd').value)||0;
+  const data = document.getElementById('movData').value;
+  if (!matId || !qtd || !data) { showToast('Preencha todos os campos obrigatórios.','err'); return; }
+  const { data: mat } = await sbClient.from('materiais').select('estoque_atual').eq('id',matId).single();
+  const novoEstoque = tipo==='entrada' ? parseFloat(mat.estoque_atual)+qtd : parseFloat(mat.estoque_atual)-qtd;
+  if (novoEstoque < 0) { showToast('Estoque insuficiente para saída.','err'); return; }
+  await sbClient.from('movimentacoes_estoque').insert({ material_id: matId, tipo, quantidade: qtd, valor_unitario: parseFloat(document.getElementById('movValor').value)||null, data, observacao: document.getElementById('movObs').value });
+  await sbClient.from('materiais').update({ estoque_atual: novoEstoque }).eq('id', matId);
+  await logAudit('movimentacoes_estoque','INSERT',matId,{estoque:mat.estoque_atual},{estoque:novoEstoque,tipo,quantidade:qtd});
+  closeModal('modalMovEstoque'); showToast('Movimentação registrada!','ok'); loadEstoque();
+}
+
+// ============================================================
+// DOCUMENTOS
+// ============================================================
+async function loadDocumentos() {
+  const cat = document.getElementById('filterCategoria').value;
+  let query = sbClient.from('documentos').select('*').order('criado_em', {ascending:false});
+  if (cat) query = query.eq('categoria', cat);
+  const { data } = await query;
+  const body = document.getElementById('documentosBody');
+  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="ti ti-folder"></i>Nenhum documento encontrado.</td></tr>'; return; }
+  body.innerHTML = data.map(d => {
+    const dt = new Date(d.criado_em).toLocaleDateString('pt-BR');
+    const catLabel = {projetos:'Projetos',alvaras:'Alvarás',licencas:'Licenças',arts:'ARTs',rrts:'RRTs',seguros:'Seguros',contratos:'Contratos',habite_se:'Habite-se',legal:'Legal'}[d.categoria]||d.categoria;
+    return `<tr><td style="color:var(--text);">${d.nome}</td><td><span class="status-badge badge-info">${catLabel}</span></td><td>${dt}</td><td style="font-family:monospace;font-size:11px;">${d.versao||'—'}</td><td>${d.arquivo_url?`<a href="${d.arquivo_url}" target="_blank" class="btn btn-sm"><i class="ti ti-eye"></i></a>`:''}<button class="btn btn-danger btn-sm" onclick="deletarDocumento('${d.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+}
+
+async function salvarDocumento() {
+  const nome = document.getElementById('docNome').value.trim();
+  const categoria = document.getElementById('docCategoria').value;
+  const versao = document.getElementById('docVersao').value;
+  const arquivo = document.getElementById('docArquivo').files[0];
+  if (!nome || !arquivo) { showToast('Informe o nome e selecione um arquivo.','err'); return; }
+  showToast('Fazendo upload...','ok');
+  const ext = arquivo.name.split('.').pop();
+  const path = `${categoria}/${Date.now()}_${nome.replace(/\s+/g,'_')}.${ext}`;
+  const { error: upErr } = await sbClient.storage.from('documentos').upload(path, arquivo);
+  if (upErr) { showToast('Erro no upload: '+upErr.message,'err'); return; }
+  const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
+  const { data, error } = await sbClient.from('documentos').insert({ nome, categoria, versao, arquivo_url: publicUrl }).select().single();
+  if (error) { showToast('Erro ao salvar: '+error.message,'err'); return; }
+  await logAudit('documentos','INSERT',data.id,null,{nome,categoria});
+  closeModal('modalDocumento'); showToast('Documento salvo!','ok'); loadDocumentos();
+}
+
+async function deletarDocumento(id) {
+  if (!confirm('Excluir este documento?')) return;
+  await sbClient.from('documentos').delete().eq('id',id);
+  await logAudit('documentos','DELETE',id,null,null);
+  showToast('Documento removido.','ok'); loadDocumentos();
+}
+
+// ============================================================
+// REUNIÕES
+// ============================================================
+async function loadReunioes() {
+  const { data } = await sbClient.from('reunioes').select('*').order('data', {ascending:false});
+  const body = document.getElementById('reunioesBody');
+  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="ti ti-message-2"></i>Nenhuma reunião registrada.</td></tr>'; return; }
+  body.innerHTML = data.map(r => {
+    const dt = new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR');
+    const pend = r.pendencias ? '<span class="status-badge badge-warn">Pendente</span>' : '<span class="status-badge badge-ok">Sem pendências</span>';
+    return `<tr><td>${dt}</td><td style="color:var(--text);">${r.assunto}</td><td>${r.participantes||'—'}</td><td>${pend}</td><td><button class="btn btn-danger btn-sm" onclick="deletarReuniao('${r.id}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+}
+
+async function salvarReuniao() {
+  const payload = { data: document.getElementById('reunData').value, assunto: document.getElementById('reunAssunto').value.trim(), participantes: document.getElementById('reunParticipantes').value, decisoes: document.getElementById('reunDecisoes').value, pendencias: document.getElementById('reunPendencias').value, responsavel: document.getElementById('reunResponsavel').value, prazo: document.getElementById('reunPrazo').value||null };
+  if (!payload.data || !payload.assunto) { showToast('Informe a data e o assunto.','err'); return; }
+  const { data, error } = await sbClient.from('reunioes').insert(payload).select().single();
+  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  await logAudit('reunioes','INSERT',data.id,null,payload);
+  closeModal('modalReuniao'); showToast('Reunião registrada!','ok'); loadReunioes();
+}
+
+async function deletarReuniao(id) {
+  if (!confirm('Excluir esta reunião?')) return;
+  await sbClient.from('reunioes').delete().eq('id',id);
+  await logAudit('reunioes','DELETE',id,null,null);
+  showToast('Reunião removida.','ok'); loadReunioes();
+}
+
+// ============================================================
+// USUÁRIOS
+// ============================================================
+async function loadUsuarios() {
+  const { data } = await sbClient.from('usuarios').select('*').order('nome');
+  const body = document.getElementById('usuariosBody');
+  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum usuário cadastrado.</td></tr>'; return; }
+  const perfilLabel = {admin:'Administrador',financeiro:'Financeiro',engenharia:'Engenharia',comercial:'Comercial',consulta:'Consulta'};
+  body.innerHTML = data.map(u => `<tr><td style="color:var(--text);">${u.nome}</td><td>${u.email}</td><td><span class="status-badge badge-info">${perfilLabel[u.perfil]||u.perfil}</span></td><td><span class="status-badge ${u.ativo?'badge-ok':'badge-gray'}">${u.ativo?'Ativo':'Inativo'}</span></td></tr>`).join('');
+}
+
+async function salvarUsuario() {
+  const nome = document.getElementById('usuNome').value.trim();
+  const email = document.getElementById('usuEmail').value.trim();
+  const senha = document.getElementById('usuSenha').value;
+  const perfil = document.getElementById('usuPerfil').value;
+  if (!nome || !email || !senha) { showToast('Preencha todos os campos.','err'); return; }
+  const { data, error } = await sbClient.auth.admin.createUser({ email, password: senha, email_confirm: true });
+  if (error) { showToast('Erro ao criar usuário: '+error.message,'err'); return; }
+  await sbClient.from('usuarios').insert({ auth_id: data.user.id, nome, email, perfil, ativo: true });
+  await logAudit('usuarios','INSERT',data.user.id,null,{nome,email,perfil});
+  closeModal('modalUsuario'); showToast('Usuário criado!','ok'); loadUsuarios();
+}
+
+// ============================================================
+// ALERTS PANEL (carrega dados reais)
+// ============================================================
+async function loadAlerts() {
+  const body = document.getElementById('alertsBody');
+  body.innerHTML = '<div class="empty-state">Carregando...</div>';
+  if (!sbClient) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7 = new Date(today); in7.setDate(in7.getDate()+7);
+  const [{ data: contas }, { data: parcelas }, { data: materiais }, { data: etapas }] = await Promise.all([
+    sbClient.from('contas_pagar').select('*').eq('status','pendente').lte('vencimento', in7.toISOString().split('T')[0]).order('vencimento'),
+    sbClient.from('parcelas').select('*, clientes(nome), unidades(numero)').in('status',['atrasado','pendente']).lte('vencimento', today.toISOString().split('T')[0]),
+    sbClient.from('materiais').select('*'),
+    sbClient.from('etapas_obra').select('*').eq('status','atrasado')
+  ]);
+  let html = '';
+  const totalAlertas = (contas?.length||0)+(parcelas?.length||0)+(materiais?.filter(m=>parseFloat(m.estoque_atual)<=parseFloat(m.estoque_minimo)).length||0)+(etapas?.length||0);
+  if (totalAlertas === 0) { body.innerHTML = '<div class="empty-state"><i class="ti ti-check"></i>Nenhuma pendência no momento.</div>'; document.getElementById('notifDot').style.display='none'; return; }
+  document.getElementById('notifDot').style.display='block';
+  if (contas?.length) {
+    html += `<div class="alert-section"><div class="alert-section-title">Contas vencendo (${contas.length})</div>`;
+    contas.forEach(c => {
+      const v = new Date(c.vencimento+'T12:00:00'); const diff = Math.round((v-today)/(1000*60*60*24));
+      const cls = diff<=0?'ai-danger':'ai-warn'; const tag = diff<0?'Vencido':diff===0?'Hoje':diff+' dias';
+      html += `<div class="alert-item"><div class="alert-item-left"><div class="alert-item-icon ${cls}"><i class="ti ti-receipt"></i></div><div class="alert-item-text"><strong>${c.fornecedor_nome||'Conta'}</strong><br>R$ ${parseFloat(c.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div><span class="alert-tag ${diff<=0?'tag-danger':'tag-warn'}">${tag}</span></div>`;
+    });
+    html += '</div>';
+  }
+  if (parcelas?.length) {
+    html += `<div class="alert-section"><div class="alert-section-title">Parcelas em atraso (${parcelas.length})</div>`;
+    parcelas.forEach(p => { html += `<div class="alert-item"><div class="alert-item-left"><div class="alert-item-icon ai-danger"><i class="ti ti-user-x"></i></div><div class="alert-item-text"><strong>${p.clientes?.nome||'Cliente'} · Apt ${p.unidades?.numero||'—'}</strong><br>R$ ${parseFloat(p.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div><span class="alert-tag tag-danger">Atrasado</span></div>`; });
+    html += '</div>';
+  }
+  if (etapas?.length) {
+    html += `<div class="alert-section"><div class="alert-section-title">Obra com atraso (${etapas.length})</div>`;
+    etapas.forEach(e => { html += `<div class="alert-item"><div class="alert-item-left"><div class="alert-item-icon ai-danger"><i class="ti ti-clock-exclamation"></i></div><div class="alert-item-text"><strong>${e.nome}</strong><br>${e.percentual||0}% concluído</div></div><span class="alert-tag tag-danger">Atrasado</span></div>`; });
+    html += '</div>';
+  }
+  const matCriticos = materiais?.filter(m=>parseFloat(m.estoque_atual)<=parseFloat(m.estoque_minimo))||[];
+  if (matCriticos.length) {
+    html += `<div class="alert-section"><div class="alert-section-title">Estoque crítico (${matCriticos.length})</div>`;
+    matCriticos.forEach(m => { html += `<div class="alert-item"><div class="alert-item-left"><div class="alert-item-icon ai-warn"><i class="ti ti-package"></i></div><div class="alert-item-text"><strong>${m.nome}</strong><br>${m.estoque_atual} ${m.unidade_medida} · mín: ${m.estoque_minimo}</div></div><span class="alert-tag tag-warn">Crítico</span></div>`; });
+    html += '</div>';
+  }
+  body.innerHTML = html;
+  document.getElementById('alertsUpdated').textContent = 'Atualizado em '+new Date().toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function toggleAlerts() {
+  const panel = document.getElementById('alertsPanel');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) { closeAlerts(); }
+  else { panel.classList.add('open'); document.getElementById('alertsOverlay').classList.add('open'); document.getElementById('alertBtn').classList.add('active'); loadAlerts(); }
+}
+function closeAlerts() {
+  document.getElementById('alertsPanel').classList.remove('open');
+  document.getElementById('alertsOverlay').classList.remove('open');
+  document.getElementById('alertBtn').classList.remove('active');
+}
+
+// ============================================================
+// RELATÓRIOS — PDF e Excel
+// ============================================================
+async function exportReport(tipo, formato) {
+  showToast('Coletando dados...', 'ok');
+  try {
+    let rows = [], headers = [], title = '';
+    if (tipo === 'fluxo') {
+      title = 'Fluxo de Caixa — Mônaco Residence';
+      const [{ data: pagar }, { data: receber }] = await Promise.all([
+        sbClient.from('contas_pagar').select('*').order('vencimento'),
+        sbClient.from('parcelas').select('*, clientes(nome), unidades(numero)').order('vencimento')
+      ]);
+      headers = ['Tipo','Descrição','Valor','Vencimento','Status'];
+      (pagar||[]).forEach(c => rows.push(['Saída', c.fornecedor_nome+' — '+c.categoria, 'R$ '+parseFloat(c.valor).toLocaleString('pt-BR',{minimumFractionDigits:2}), new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR'), c.status]));
+      (receber||[]).forEach(p => rows.push(['Entrada', (p.clientes?.nome||'—')+' · Apt '+p.unidades?.numero, 'R$ '+parseFloat(p.valor).toLocaleString('pt-BR',{minimumFractionDigits:2}), new Date(p.vencimento+'T12:00:00').toLocaleDateString('pt-BR'), p.status]));
+    } else if (tipo === 'unidades') {
+      title = 'Unidades — Mônaco Residence';
+      const { data } = await sbClient.from('unidades').select('*, clientes(nome,telefone,email)').order('numero');
+      headers = ['Unidade','Andar','Status','Cliente','Telefone','E-mail'];
+      (data||[]).forEach(u => rows.push([u.numero, u.andar+'º', u.status, u.clientes?.nome||'—', u.clientes?.telefone||'—', u.clientes?.email||'—']));
+    } else if (tipo === 'obra') {
+      title = 'Evolução Física da Obra — Mônaco Residence';
+      const { data } = await sbClient.from('etapas_obra').select('*').order('ordem');
+      headers = ['Ordem','Etapa','Data Prevista','Data Realizada','% Concluído','Status'];
+      (data||[]).forEach(e => rows.push([e.ordem, e.nome, e.data_prevista||'—', e.data_realizada||'—', (e.percentual||0)+'%', e.status]));
+    } else if (tipo === 'materiais') {
+      title = 'Compras e Estoque — Mônaco Residence';
+      const { data } = await sbClient.from('materiais').select('*').order('nome');
+      headers = ['Material','Unidade','Estoque Atual','Estoque Mínimo','Situação'];
+      (data||[]).forEach(m => {
+        const sit = parseFloat(m.estoque_atual)<=parseFloat(m.estoque_minimo)?'CRÍTICO':parseFloat(m.estoque_atual)<=parseFloat(m.estoque_minimo)*1.3?'Atenção':'Normal';
+        rows.push([m.nome, m.unidade_medida, m.estoque_atual, m.estoque_minimo, sit]);
+      });
+    } else if (tipo === 'fornecedores') {
+      title = 'Fornecedores — Mônaco Residence';
+      const { data } = await sbClient.from('fornecedores').select('*').order('nome');
+      headers = ['Nome','Categoria','Responsável','Valor Contratado','Início','Término','Status'];
+      (data||[]).forEach(f => rows.push([f.nome, f.categoria, f.responsavel||'—', f.valor_contratado?'R$ '+parseFloat(f.valor_contratado).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—', f.data_inicio||'—', f.data_termino||'—', f.status]));
+    }
+    if (formato === 'xlsx') exportExcel(title, headers, rows);
+    else exportPDF(title, headers, rows);
+  } catch(e) { showToast('Erro ao gerar relatório: '+e.message, 'err'); }
+}
+
+function exportExcel(title, headers, rows) {
+  const BOM = '\uFEFF';
+  let csv = BOM + title + '\n\n';
+  csv += headers.join(';') + '\n';
+  rows.forEach(r => { csv += r.map(v => '"'+String(v||'').replace(/"/g,'""')+'"').join(';') + '\n'; });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = title.replace(/[^a-z0-9]/gi,'_').toLowerCase() + '_' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+  showToast('Excel gerado com sucesso!', 'ok');
+}
+
+function exportPDF(title, headers, rows) {
+  const w = window.open('', '_blank');
+  const date = new Date().toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric'});
+  const thHTML = headers.map(h=>`<th>${h}</th>`).join('');
+  const tdHTML = rows.map(r=>`<tr>${r.map(v=>`<td>${v||'—'}</td>`).join('')}</tr>`).join('');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${title}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:0;padding:2rem;}
+  .header{border-bottom:2px solid #C9A84C;padding-bottom:1rem;margin-bottom:1.5rem;}
+  .logo{font-size:20px;font-weight:700;letter-spacing:0.1em;color:#C9A84C;text-transform:uppercase;}
+  .subtitle{font-size:11px;color:#888;margin-top:2px;letter-spacing:0.15em;}
+  h2{font-size:15px;font-weight:600;margin:0 0 4px;}
+  .meta{font-size:11px;color:#888;}
+  table{width:100%;border-collapse:collapse;margin-top:1rem;}
+  th{background:#1A1A1A;color:#C9A84C;padding:8px 10px;text-align:left;font-size:10px;letter-spacing:0.05em;text-transform:uppercase;}
+  td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px;}
+  tr:nth-child(even) td{background:#F9F9F9;}
+  .footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #eee;font-size:10px;color:#aaa;text-align:center;}
+  @media print{body{padding:1rem;} .no-print{display:none;}}
+</style></head><body>
+<div class="header">
+  <div class="logo">Mônaco Residence</div>
+  <div class="subtitle">Av. Nereu Ramos, 1271 · Chapecó, SC</div>
+</div>
+<h2>${title}</h2>
+<div class="meta">Gerado em ${date} · ${rows.length} registros</div>
+<table><thead><tr>${thHTML}</tr></thead><tbody>${tdHTML}</tbody></table>
+<div class="footer">Mônaco Residence — Sistema de Gestão · STT Construtora e Incorporadora</div>
+<div class="no-print" style="margin-top:1.5rem;text-align:center;">
+  <button onclick="window.print()" style="padding:10px 24px;background:#C9A84C;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:#000;">Imprimir / Salvar PDF</button>
+</div>
+</body></html>`);
+  w.document.close();
+  showToast('Relatório PDF aberto em nova aba.', 'ok');
+}
+
+// ============================================================
+// CONFIG
+// ============================================================
+function saveConfig() {
+  const url = document.getElementById('cfgUrl').value.trim();
+  const key = document.getElementById('cfgKey').value.trim();
+  const claude = document.getElementById('cfgClaude').value.trim();
+  if (!url || !key) { showToast('Preencha URL e Anon Key do Supabase.','err'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  if (claude) localStorage.setItem('claude_key', claude);
+  initSupabase();
+  showToast('Configuração salva! Faça login.','ok');
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+async function exportarTodosDados() {
+  if (!sbClient) { showToast('Supabase não conectado.','err'); return; }
+  showToast('Exportando todos os dados...','ok');
+  try {
+    const tabelas = ['unidades','clientes','financeiro_unidade','parcelas','fornecedores','contas_pagar','etapas_obra','cronograma_unidades','materiais','movimentacoes_estoque','documentos','etapas_administrativas','reunioes','auditoria'];
+    const backup = { exportado_em: new Date().toISOString(), sistema: 'Mônaco Residence', versao: '2.0' };
+    for (const t of tabelas) {
+      const { data } = await sbClient.from(t).select('*');
+      backup[t] = data || [];
+    }
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'monaco_backup_' + new Date().toISOString().split('T')[0] + '.json';
+    a.click();
+    showToast('Backup completo exportado!','ok');
+  } catch(e) { showToast('Erro ao exportar: '+e.message,'err'); }
+}
+
+// ============================================================
+// BUSCA GLOBAL
+// ============================================================
+document.getElementById('globalSearch').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  if (q.length > 2) {
+    const map = {cliente:'clientes',apartamento:'clientes',apto:'clientes',financeiro:'financeiro',conta:'financeiro',fornecedor:'fornecedores',estoque:'estoque',material:'estoque',cronograma:'cronograma',documento:'documentos','reunião':'reunioes',reuniao:'reunioes',auditoria:'auditoria'};
+    for (const [t,p] of Object.entries(map)) { if (q.includes(t)) { showPage(p); this.value=''; return; } }
+  }
+});
+
+// ============================================================
+// MODALS
+// ============================================================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target===m) m.classList.remove('open'); }); });
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type='ok') {
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type; t.textContent = msg; wrap.appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+// ============================================================
+// ASSISTENTE IA
+// ============================================================
+function toggleIA() { document.getElementById('iaPanel').classList.toggle('open'); }
+
+async function askIA(q) { document.getElementById('iaInput').value = q; await sendIA(); }
+
+async function sendIA() {
+  const input = document.getElementById('iaInput');
+  const msgs = document.getElementById('iaMessages');
+  const q = input.value.trim(); if (!q) return;
+  input.value = '';
+  const uMsg = document.createElement('div'); uMsg.className='ia-msg user'; uMsg.textContent=q; msgs.appendChild(uMsg);
+  const bMsg = document.createElement('div'); bMsg.className='ia-msg bot loading'; bMsg.textContent='Consultando...'; msgs.appendChild(bMsg);
+  msgs.scrollTop = msgs.scrollHeight;
+  const claudeKey = localStorage.getItem('claude_key')||'';
+  if (!claudeKey) { bMsg.textContent='Configure a chave da API Claude em Configuração para ativar o assistente.'; bMsg.classList.remove('loading'); return; }
+  try {
+    // Coletar contexto real do sistema
+    let context = 'Sistema de gestão do Mônaco Residence, edifício de 60 apartamentos em Chapecó, SC.';
+    if (sbClient) {
+      const [{ data: unidades }, { data: contas }, { data: materiais }, { data: etapas }] = await Promise.all([
+        sbClient.from('unidades').select('status'),
+        sbClient.from('contas_pagar').select('valor,vencimento,status,fornecedor_nome').eq('status','pendente').limit(20),
+        sbClient.from('materiais').select('nome,estoque_atual,estoque_minimo,unidade_medida'),
+        sbClient.from('etapas_obra').select('nome,percentual,status').order('ordem')
+      ]);
+      if (unidades) {
+        const v=unidades.filter(u=>u.status==='vendida').length, d=unidades.filter(u=>u.status==='disponivel').length;
+        context += ` Unidades: ${v} vendidas, ${d} disponíveis.`;
+      }
+      if (contas?.length) context += ` Contas a pagar pendentes: ${contas.length}, total R$ ${contas.reduce((s,c)=>s+parseFloat(c.valor||0),0).toLocaleString('pt-BR',{minimumFractionDigits:2})}.`;
+      if (materiais?.length) { const crit=materiais.filter(m=>parseFloat(m.estoque_atual)<=parseFloat(m.estoque_minimo)); if(crit.length) context += ` Materiais críticos: ${crit.map(m=>m.nome).join(', ')}.`; }
+      if (etapas?.length) {
+        const atrasadas=etapas.filter(e=>e.status==='atrasado'); const andamento=etapas.filter(e=>e.status==='em_andamento');
+        const pct=Math.round(etapas.reduce((s,e)=>s+(e.percentual||0),0)/etapas.length);
+        context += ` Obra: ${pct}% médio concluído. Atrasadas: ${atrasadas.map(e=>e.nome).join(', ')||'nenhuma'}. Em andamento: ${andamento.map(e=>e.nome).join(', ')||'nenhuma'}.`;
+      }
+    }
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:500, system:`Você é o assistente do sistema de gestão do Mônaco Residence. Contexto atual: ${context}. Responda de forma direta e objetiva em português.`, messages:[{role:'user',content:q}] })
+    });
+    const data = await res.json();
+    bMsg.textContent = data.content?.[0]?.text || 'Sem resposta.';
+  } catch(e) { bMsg.textContent='Erro ao conectar. Verifique a chave da API.'; }
+  bMsg.classList.remove('loading'); msgs.scrollTop=msgs.scrollHeight;
+}
+
+function toggleLoginConfig() {
+  const panel = document.getElementById('loginConfigPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  const url = localStorage.getItem('sb_url');
+  const key = localStorage.getItem('sb_key');
+  if (url) document.getElementById('lcUrl').value = url;
+  if (key) document.getElementById('lcKey').value = key;
+}
+
+function saveLoginConfig() {
+  const url = document.getElementById('lcUrl').value.trim();
+  const key = document.getElementById('lcKey').value.trim();
+  if (!url || !key) { alert('Preencha URL e Anon Key.'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  // Atualizar também os campos da tela de config interna
+  const cfgUrl = document.getElementById('cfgUrl');
+  const cfgKey = document.getElementById('cfgKey');
+  if (cfgUrl) cfgUrl.value = url;
+  if (cfgKey) cfgKey.value = key;
+  initSupabase();
+  document.getElementById('loginConfigPanel').style.display = 'none';
+  showToast('Credenciais salvas! Agora faça login.', 'ok');
+}
+
+// ============================================================
+// PENDÊNCIAS GERAIS (áreas comuns)
+// ============================================================
+async function loadPendenciasGerais() {
+  const area = document.getElementById('pgArea').value;
+  const disc = document.getElementById('pgDisc').value;
+  const wrap = document.getElementById('pgWrap');
+  if (!wrap) return;
+
+  // Preencher select disciplinas
+  const discSel = document.getElementById('pgDisc');
+  if (discSel && discSel.options.length <= 1) {
+    discSel.innerHTML = '<option value="">Todas as disciplinas</option>' +
+      DISCIPLINAS.map(d=>`<option value="${d.id}">${d.label}</option>`).join('');
+  }
+
+  const disciplinasFiltradas = disc ? DISCIPLINAS.filter(d=>d.id===disc) : DISCIPLINAS;
+
+  wrap.innerHTML = disciplinasFiltradas.map(d => {
+    return `<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 1.25rem;cursor:pointer;" onclick="togglePgDisc('${area}','${d.id}')">
+        <span style="flex:1;font-size:14px;font-weight:500;font-family:Arial,sans-serif;color:var(--text);">${d.label}</span>
+        <i class="ti ti-chevron-down" style="color:var(--text-dim);font-size:16px;" aria-hidden="true"></i>
+      </div>
+      <div id="pgDisc-${area}-${d.id}" style="display:none;border-top:0.5px solid var(--border);padding:1rem;">
+        <div id="pgPendList-${area}-${d.id}">
+          <div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Carregando...</div>
+        </div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+          <input type="text" placeholder="Descrever pendência..." id="pgInput-${area}-${d.id}"
+            style="width:100%;background:var(--surface2);border:0.5px solid var(--border-strong);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px;font-family:Arial,sans-serif;outline:none;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="file" accept="image/*" id="pgFoto-${area}-${d.id}"
+              style="flex:1;font-size:12px;font-family:Arial,sans-serif;color:var(--text-muted);background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:5px;">
+            <button onclick="adicionarPgPendencia('${area}','${d.id}')"
+              style="background:var(--gold);border:none;border-radius:6px;padding:8px 16px;cursor:pointer;color:var(--black);font-size:13px;font-family:Arial,sans-serif;font-weight:600;white-space:nowrap;">
+              + Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function togglePgDisc(area, discId) {
+  const el = document.getElementById(`pgDisc-${area}-${discId}`);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) await carregarPgPendencias(area, discId);
+}
+
+async function carregarPgPendencias(area, discId) {
+  const listEl = document.getElementById(`pgPendList-${area}-${discId}`);
+  if (!listEl) return;
+  const { data } = await sbClient.from('pendencias_unidade')
+    .select('*').eq('area_geral', area).eq('disciplina', discId).eq('concluida', false).order('criado_em');
+  if (!data || !data.length) {
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;padding:4px 0;">Nenhuma pendência aberta.</div>';
+    return;
+  }
+  listEl.innerHTML = data.map(p => `
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:10px;background:var(--surface2);border-radius:8px;margin-bottom:8px;border:0.5px solid var(--border);">
+      <div style="flex:1;">
+        <div style="font-size:13px;color:var(--text-muted);font-family:Arial,sans-serif;">${p.descricao}</div>
+        ${p.foto_url?`<img src="${p.foto_url}" style="max-width:100%;max-height:150px;border-radius:6px;margin-top:8px;object-fit:cover;" alt="foto">`:''}
+        <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:4px;">${new Date(p.criado_em).toLocaleDateString('pt-BR')}</div>
+      </div>
+      <button onclick="concluirPgPendencia('${p.id}','${area}','${discId}')" title="Marcar concluída"
+        style="background:none;border:0.5px solid rgba(29,158,117,0.3);border-radius:6px;padding:6px 10px;cursor:pointer;color:var(--success);font-size:16px;flex-shrink:0;">
+        <i class="ti ti-check" aria-hidden="true"></i>
+      </button>
+    </div>`).join('');
+}
+
+async function adicionarPgPendencia(area, discId) {
+  const input = document.getElementById(`pgInput-${area}-${discId}`);
+  const fotoInput = document.getElementById(`pgFoto-${area}-${discId}`);
+  const descricao = input?.value.trim();
+  if (!descricao) { showToast('Descreva a pendência.','err'); return; }
+  let foto_url = null;
+  if (fotoInput?.files[0]) {
+    const file = fotoInput.files[0];
+    const path = `pendencias/geral/${area}/${discId}/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+    const { error: upErr } = await sbClient.storage.from('documentos').upload(path, file);
+    if (!upErr) {
+      const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
+      foto_url = publicUrl;
+    }
+  }
+  const { error } = await sbClient.from('pendencias_unidade').insert({ area_geral: area, disciplina: discId, descricao, foto_url, concluida: false });
+  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  showToast('Pendência adicionada!','ok');
+  input.value = '';
+  if (fotoInput) fotoInput.value = '';
+  await carregarPgPendencias(area, discId);
+}
+
+async function concluirPgPendencia(pendId, area, discId) {
+  await sbClient.from('pendencias_unidade').update({concluida:true}).eq('id',pendId);
+  showToast('Pendência concluída!','ok');
+  await carregarPgPendencias(area, discId);
+}
+
+async function exportarPendenciasGerais() {
+  const area = document.getElementById('pgArea').value;
+  const disc = document.getElementById('pgDisc').value;
+  let query = sbClient.from('pendencias_unidade').select('*').eq('area_geral', area).eq('concluida', false).order('disciplina');
+  if (disc) query = query.eq('disciplina', disc);
+  const { data } = await query;
+  if (!data || !data.length) { showToast('Nenhuma pendência encontrada.','ok'); return; }
+  const discLabel = {}; DISCIPLINAS.forEach(d => discLabel[d.id]=d.label);
+  const areaLabel = {subsolo:'Subsolo',terreo:'Térreo',g1:'G1',g2:'G2',g3:'G3',lazer:'Lazer'};
+  const w = window.open('','_blank');
+  const rows = data.map(p=>`<tr><td>${areaLabel[p.area_geral]||p.area_geral}</td><td>${discLabel[p.disciplina]||p.disciplina}</td><td>${p.descricao}</td><td>${p.foto_url?`<a href="${p.foto_url}" target="_blank">Ver foto</a>`:'—'}</td><td>${new Date(p.criado_em).toLocaleDateString('pt-BR')}</td></tr>`).join('');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Pendências Gerais</title>
+<style>body{font-family:Arial,sans-serif;font-size:12px;padding:2rem;}h1{font-size:16px;}p{font-size:11px;color:#888;margin-bottom:1.5rem;}table{width:100%;border-collapse:collapse;}th{background:#1A1A1A;color:#C9A84C;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;}td{padding:7px 10px;border-bottom:1px solid #eee;}tr:nth-child(even) td{background:#f9f9f9;}</style>
+</head><body>
+<h1>Pendências Gerais — Mônaco Residence</h1>
+<p>${areaLabel[area]} · ${disc?discLabel[disc]:'Todas as disciplinas'} · ${data.length} pendência(s)</p>
+<table><thead><tr><th>Área</th><th>Disciplina</th><th>Pendência</th><th>Foto</th><th>Data</th></tr></thead><tbody>${rows}</tbody></table>
+<div style="margin-top:1rem;text-align:center;"><button onclick="window.print()" style="padding:10px 24px;background:#C9A84C;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Imprimir / PDF</button></div>
+</body></html>`);
+  w.document.close();
+}
+
+// LOGIN com Enter
+document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// INIT
+boot();
+</script>
+</body>
+</html>
