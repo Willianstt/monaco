@@ -1077,6 +1077,27 @@ textarea.form-input{min-height:80px;resize:vertical;}
 
 <script>
 // ============================================================
+// HELPER: criar elementos DOM sem problemas de aspas
+// ============================================================
+function el(tag, attrs={}, children=[]) {
+  const e = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v]) => {
+    if (k === 'style') e.style.cssText = v;
+    else if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  });
+  children.forEach(c => { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return e;
+}
+function div(attrs={}, children=[]) { return el('div', attrs, children); }
+function btn(attrs={}, children=[]) { return el('button', attrs, children); }
+function span(attrs={}, children=[]) { return el('span', attrs, children); }
+function icon(name) { const i = document.createElement('i'); i.className = 'ti ti-'+name; i.setAttribute('aria-hidden','true'); return i; }
+
+// ============================================================
 // CONFIG & INIT
 // ============================================================
 let sbClient = null;
@@ -2341,16 +2362,21 @@ function filtrarFornecedores() {
 function renderFornecedores(lista) {
   const wrap = document.getElementById('fornecedoresCards');
   if (!wrap) return;
-  if (!lista.length) { wrap.innerHTML = '<div style="padding:3rem;text-align:center;color:var(--text-dim);font-family:Arial,sans-serif;font-size:13px;">Nenhum fornecedor encontrado.</div>'; return; }
-  wrap.innerHTML = lista.map(f =>
-    '<div data-fornid="'+f.id+'" style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;" class="forn-card">' +
-    '<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;">'+f.nome+'</div>' +
-    '<div style="font-size:12px;color:var(--gold);font-family:Arial,sans-serif;margin-top:3px;">'+(f.categoria||'—')+'</div></div>' +
-    '<i class="ti ti-chevron-right" style="color:var(--text-dim);font-size:18px;flex-shrink:0;"></i></div>'
-  ).join('');
-  // Adicionar eventos via JS (evita problema de aspas no onclick inline)
-  wrap.querySelectorAll('.forn-card').forEach(el => {
-    el.addEventListener('click', () => abrirDetalheFornecedor(el.dataset.fornid));
+  wrap.innerHTML = '';
+  if (!lista.length) {
+    wrap.appendChild(div({style:'padding:3rem;text-align:center;color:var(--text-dim);font-family:Arial,sans-serif;font-size:13px;', text:'Nenhum fornecedor encontrado.'}));
+    return;
+  }
+  lista.forEach(f => {
+    const card = div({style:'background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;'}, [
+      div({style:'flex:1;min-width:0;'}, [
+        div({style:'font-size:15px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;', text:f.nome}),
+        div({style:'font-size:12px;color:var(--gold);font-family:Arial,sans-serif;margin-top:3px;', text:f.categoria||'—'})
+      ]),
+      icon('chevron-right')
+    ]);
+    card.addEventListener('click', () => abrirDetalheFornecedor(f.id));
+    wrap.appendChild(card);
   });
 }
 
@@ -2367,54 +2393,97 @@ async function abrirDetalheFornecedor(fornId) {
   document.getElementById('orcFornecedorId').value = fornId;
   document.getElementById('modalUnidadeTitle').textContent = forn.nome;
   const body = document.getElementById('modalUnidadeBody');
+  body.innerHTML = '';
 
-  let html = '<div style="padding:1rem;">';
-  html += '<div style="background:var(--surface2);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem;">';
-  html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">Dados de contato</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-  html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Categoria</div><div style="font-size:13px;color:var(--gold);font-family:Arial,sans-serif;">'+(forn.categoria||'—')+'</div></div>';
-  html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Responsável</div><div style="font-size:13px;color:var(--text);font-family:Arial,sans-serif;">'+(forn.responsavel||'—')+'</div></div>';
-  const telHtml = forn.telefone ? '<a href="tel:'+forn.telefone+'" style="color:var(--gold);text-decoration:none;">'+forn.telefone+'</a>' : '—';
-  html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Telefone</div><div style="font-size:13px;color:var(--text);font-family:Arial,sans-serif;">'+telHtml+'</div></div>';
-  const emailHtml = forn.email ? '<a href="mailto:'+forn.email+'" style="color:var(--gold);text-decoration:none;word-break:break-all;">'+forn.email+'</a>' : '—';
-  html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">E-mail</div><div style="font-size:13px;color:var(--text);font-family:Arial,sans-serif;">'+emailHtml+'</div></div>';
-  html += '</div>';
-  html += '<div style="display:flex;gap:8px;margin-top:1rem;">';
-  html += '<button class="btn btn-sm" onclick="editarFornecedor(''+fornId+'')"><i class="ti ti-pencil"></i> Editar</button>';
-  html += '<button class="btn btn-danger btn-sm" onclick="if(confirm('Excluir?'))deletarFornecedor(''+fornId+'');closeModal('modalUnidade');"><i class="ti ti-trash"></i> Excluir</button>';
-  html += '</div></div>';
+  const wrap = div({style:'padding:1rem;'});
 
-  html += '<div>';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">';
-  html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Orçamento ('+(itens||[]).length+' itens)</div>';
-  html += '<button class="btn btn-primary btn-sm" onclick="openModal('modalOrcamentoForn')"><i class="ti ti-plus"></i> Adicionar</button>';
-  html += '</div>';
+  // Bloco de contato
+  const contato = div({style:'background:var(--surface2);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem;'});
+  contato.appendChild(div({style:'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;', text:'Dados de contato'}));
+  const grid = div({style:'display:grid;grid-template-columns:1fr 1fr;gap:10px;'});
+  const campos = [
+    ['Categoria', forn.categoria||'—', true],
+    ['Responsável', forn.responsavel||'—', false],
+    ['Telefone', forn.telefone||'—', false],
+    ['E-mail', forn.email||'—', false]
+  ];
+  campos.forEach(([label, valor, isGold]) => {
+    const c = div({});
+    c.appendChild(div({style:'font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;', text:label}));
+    const vEl = div({style:'font-size:13px;font-family:Arial,sans-serif;color:'+(isGold?'var(--gold)':'var(--text)'+';')});
+    if (label==='Telefone' && forn.telefone) {
+      const a = el('a',{href:'tel:'+forn.telefone,style:'color:var(--gold);text-decoration:none;', text:forn.telefone});
+      vEl.appendChild(a);
+    } else if (label==='E-mail' && forn.email) {
+      const a = el('a',{href:'mailto:'+forn.email,style:'color:var(--gold);text-decoration:none;word-break:break-all;', text:forn.email});
+      vEl.appendChild(a);
+    } else {
+      vEl.textContent = valor;
+    }
+    c.appendChild(vEl);
+    grid.appendChild(c);
+  });
+  contato.appendChild(grid);
+
+  const acoes = div({style:'display:flex;gap:8px;margin-top:1rem;'});
+  const btnEdit = btn({class:'btn btn-sm'}, [icon('pencil')]);
+  btnEdit.appendChild(document.createTextNode(' Editar'));
+  btnEdit.addEventListener('click', () => editarFornecedor(fornId));
+  const btnDel = btn({class:'btn btn-danger btn-sm'}, [icon('trash')]);
+  btnDel.appendChild(document.createTextNode(' Excluir'));
+  btnDel.addEventListener('click', () => { if(confirm('Excluir este fornecedor?')) { deletarFornecedor(fornId); closeModal('modalUnidade'); } });
+  acoes.appendChild(btnEdit);
+  acoes.appendChild(btnDel);
+  contato.appendChild(acoes);
+  wrap.appendChild(contato);
+
+  // Bloco de orçamento
+  const orcWrap = div({});
+  const orcHeader = div({style:'display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;'});
+  orcHeader.appendChild(div({style:'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;', text:'Orçamento — '+(itens||[]).length+' itens'}));
+  const btnAdd = btn({class:'btn btn-primary btn-sm'}, [icon('plus')]);
+  btnAdd.appendChild(document.createTextNode(' Adicionar'));
+  btnAdd.addEventListener('click', () => openModal('modalOrcamentoForn'));
+  orcHeader.appendChild(btnAdd);
+  orcWrap.appendChild(orcHeader);
 
   if (!(itens||[]).length) {
-    html += '<div style="font-size:13px;color:var(--text-dim);font-family:Arial,sans-serif;padding:1rem;text-align:center;border:0.5px dashed var(--border);border-radius:var(--radius-lg);">Nenhum item.<br><span style="font-size:11px;">Adicione manualmente ou importe um documento.</span></div>';
+    orcWrap.appendChild(div({style:'font-size:13px;color:var(--text-dim);font-family:Arial,sans-serif;padding:1rem;text-align:center;border:0.5px dashed var(--border);border-radius:var(--radius-lg);', html:'Nenhum item.<br><span style="font-size:11px;">Adicione manualmente ou importe um documento.</span>'}));
   } else {
-    html += '<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">';
-    (itens||[]).forEach(i => {
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:0.5px solid rgba(201,168,76,0.06);">';
-      html += '<div style="flex:1;min-width:0;"><div style="font-size:13px;color:var(--text);font-family:Arial,sans-serif;">'+(i.descricao||'')+'</div>';
-      if (i.marca||i.observacao) html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;">'+(i.marca||'')+(i.marca&&i.observacao?' · ':'')+(i.observacao||'')+'</div>';
-      html += '</div>';
-      html += '<div style="text-align:right;flex-shrink:0;"><div style="font-size:14px;font-weight:500;color:var(--gold);font-family:Arial,sans-serif;">R$ '+parseFloat(i.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div>';
-      html += '<div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">/'+i.unidade+'</div></div>';
-      html += '<button onclick="deletarOrcItemDireto(''+i.id+'',''+fornId+'')" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;padding:0;flex-shrink:0;"><i class="ti ti-x"></i></button>';
-      html += '</div>';
+    const lista = div({style:'border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;'});
+    (itens||[]).forEach((item, idx) => {
+      const row = div({style:'display:flex;align-items:center;gap:10px;padding:11px 14px;'+(idx<itens.length-1?'border-bottom:0.5px solid rgba(201,168,76,0.06);':'')});
+      const info = div({style:'flex:1;min-width:0;'});
+      info.appendChild(div({style:'font-size:13px;color:var(--text);font-family:Arial,sans-serif;', text:item.descricao||''}));
+      if (item.marca||item.observacao) {
+        info.appendChild(div({style:'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;', text:(item.marca||'')+(item.marca&&item.observacao?' · ':'')+(item.observacao||'')}));
+      }
+      row.appendChild(info);
+      const preco = div({style:'text-align:right;flex-shrink:0;'});
+      preco.appendChild(div({style:'font-size:14px;font-weight:500;color:var(--gold);font-family:Arial,sans-serif;', text:'R$ '+parseFloat(item.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}));
+      preco.appendChild(div({style:'font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;', text:'/'+item.unidade}));
+      row.appendChild(preco);
+      const btnX = btn({style:'background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;padding:0;flex-shrink:0;'}, [icon('x')]);
+      btnX.addEventListener('click', () => deletarOrcItemDireto(item.id, fornId));
+      row.appendChild(btnX);
+      lista.appendChild(row);
     });
-    html += '</div>';
+    orcWrap.appendChild(lista);
   }
 
-  html += '<div style="margin-top:10px;">';
-  html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-bottom:6px;">Importar orçamento (PDF, Excel, CSV)</div>';
-  html += '<input type="file" accept=".pdf,.xlsx,.xls,.csv" id="importOrcFile_'+fornId+'" style="font-size:12px;font-family:Arial,sans-serif;color:var(--text-muted);background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:6px;width:100%;" onchange="importarOrcamento(''+fornId+'')">';
-  html += '</div></div></div>';
-
-  body.innerHTML = html;
+  // Import
+  const importWrap = div({style:'margin-top:10px;'});
+  importWrap.appendChild(div({style:'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-bottom:6px;', text:'Importar orçamento (PDF, Excel, CSV)'}));
+  const fileInput = el('input',{type:'file',accept:'.pdf,.xlsx,.xls,.csv',style:'font-size:12px;font-family:Arial,sans-serif;color:var(--text-muted);background:var(--surface2);border:0.5px solid var(--border);border-radius:6px;padding:6px;width:100%;'});
+  fileInput.id = 'importOrcFile_'+fornId;
+  fileInput.addEventListener('change', () => importarOrcamento(fornId));
+  importWrap.appendChild(fileInput);
+  orcWrap.appendChild(importWrap);
+  wrap.appendChild(orcWrap);
+  body.appendChild(wrap);
   openModal('modalUnidade');
 }
+
 
 async function deletarOrcItemDireto(itemId, fornId) {
   await sbClient.from('fornecedor_orcamentos').delete().eq('id', itemId);
