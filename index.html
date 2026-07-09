@@ -1097,6 +1097,15 @@ function btn(attrs={}, children=[]) { return el('button', attrs, children); }
 function span(attrs={}, children=[]) { return el('span', attrs, children); }
 function icon(name) { const i = document.createElement('i'); i.className = 'ti ti-'+name; i.setAttribute('aria-hidden','true'); return i; }
 
+// Sanitizar nome de arquivo - remove acentos e caracteres especiais
+function sanitizarNomeArquivo(nome) {
+  return nome
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos
+    .replace(/[^a-zA-Z0-9._-]/g, '_')                // substitui especiais por _
+    .replace(/_+/g, '_')                              // remove underscores duplos
+    .toLowerCase();
+}
+
 // ============================================================
 // CONFIG & INIT
 // ============================================================
@@ -2110,7 +2119,7 @@ async function adicionarPendenciaCorredor(andar, disciplina) {
   let foto_url = null;
   if (fotoInput?.files[0]) {
     const file = fotoInput.files[0];
-    const path = `pendencias/corredor_${andar}/${disciplina}/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+    const path = 'pendencias/corredor_' + andar + '/' + disciplina + '/' + Date.now() + '_' + sanitizarNomeArquivo(file.name);
     const { error: upErr } = await sbClient.storage.from('documentos').upload(path, file);
     if (!upErr) {
       const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
@@ -2162,7 +2171,7 @@ async function adicionarPendencia(unidadeId, disciplina, numero) {
   let foto_url = null;
   if (fotoInput?.files[0]) {
     const file = fotoInput.files[0];
-    const path = `pendencias/${unidadeId}/${disciplina}/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+    const path = 'pendencias/' + unidadeId + '/' + disciplina + '/' + Date.now() + '_' + sanitizarNomeArquivo(file.name);
     const { error: upErr } = await sbClient.storage.from('documentos').upload(path, file);
     if (!upErr) {
       const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
@@ -2663,7 +2672,7 @@ async function salvarDocumento() {
   if (!nome || !arquivo) { showToast('Informe o nome e selecione um arquivo.','err'); return; }
   showToast('Fazendo upload...','ok');
   const ext = arquivo.name.split('.').pop();
-  const path = `${categoria}/${Date.now()}_${nome.replace(/\s+/g,'_')}.${ext}`;
+  const path = categoria + '/' + Date.now() + '_' + sanitizarNomeArquivo(arquivo.name);
   const { error: upErr } = await sbClient.storage.from('documentos').upload(path, arquivo);
   if (upErr) { showToast('Erro no upload: '+upErr.message,'err'); return; }
   const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
@@ -3112,7 +3121,7 @@ async function adicionarPgPendencia(area, discId) {
   let foto_url = null;
   if (fotoInput?.files[0]) {
     const file = fotoInput.files[0];
-    const path = `pendencias/geral/${area}/${discId}/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+    const path = 'pendencias/geral/' + area + '/' + discId + '/' + Date.now() + '_' + sanitizarNomeArquivo(file.name);
     const { error: upErr } = await sbClient.storage.from('documentos').upload(path, file);
     if (!upErr) {
       const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
