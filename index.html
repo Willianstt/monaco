@@ -796,8 +796,17 @@ textarea.form-input{min-height:80px;resize:vertical;}
           </select></div>
         <div class="form-group"><label class="form-label">Versão</label><input type="text" class="form-input" id="docVersao" value="v1.0"></div>
       </div>
-      <div class="form-group"><label class="form-label">Arquivo (PDF, JPG, PNG, DOCX, XLSX)</label>
+      <div style="display:flex;gap:8px;margin-bottom:0.75rem;">
+        <button class="btn btn-sm" id="btnModoUpload" onclick="setModoDoc('upload')" style="flex:1;justify-content:center;background:var(--gold);color:var(--black);border-color:var(--gold);">Upload de arquivo</button>
+        <button class="btn btn-sm" id="btnModoLink" onclick="setModoDoc('link')" style="flex:1;justify-content:center;">Link externo</button>
+      </div>
+      <div id="docModoUpload" class="form-group"><label class="form-label">Arquivo (PDF, JPG, PNG, DOCX, XLSX)</label>
         <input type="file" class="form-input" id="docArquivo" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" style="cursor:pointer;"></div>
+      <div id="docModoLink" class="form-group" style="display:none;">
+        <label class="form-label">Link externo (Google Drive, OneDrive, Dropbox...)</label>
+        <input type="url" class="form-input" id="docLink" placeholder="https://drive.google.com/...">
+        <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:6px;">Certifique-se que o link está configurado como público ou compartilhado.</div>
+      </div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('modalDocumento')">Cancelar</button><button class="btn btn-primary" onclick="salvarDocumento()">Fazer upload</button></div>
   </div>
@@ -2664,22 +2673,48 @@ async function loadDocumentos() {
   }).join('');
 }
 
+function setModoDoc(modo) {
+  document.getElementById('docModoUpload').style.display = modo==='upload' ? 'block' : 'none';
+  document.getElementById('docModoLink').style.display = modo==='link' ? 'block' : 'none';
+  document.getElementById('btnModoUpload').style.cssText = modo==='upload'
+    ? 'flex:1;justify-content:center;background:var(--gold);color:var(--black);border-color:var(--gold);'
+    : 'flex:1;justify-content:center;';
+  document.getElementById('btnModoLink').style.cssText = modo==='link'
+    ? 'flex:1;justify-content:center;background:var(--gold);color:var(--black);border-color:var(--gold);'
+    : 'flex:1;justify-content:center;';
+}
+
 async function salvarDocumento() {
   const nome = document.getElementById('docNome').value.trim();
   const categoria = document.getElementById('docCategoria').value;
   const versao = document.getElementById('docVersao').value;
-  const arquivo = document.getElementById('docArquivo').files[0];
-  if (!nome || !arquivo) { showToast('Informe o nome e selecione um arquivo.','err'); return; }
-  showToast('Fazendo upload...','ok');
-  const ext = arquivo.name.split('.').pop();
-  const path = categoria + '/' + Date.now() + '_' + sanitizarNomeArquivo(arquivo.name);
-  const { error: upErr } = await sbClient.storage.from('documentos').upload(path, arquivo);
-  if (upErr) { showToast('Erro no upload: '+upErr.message,'err'); return; }
-  const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
-  const { data, error } = await sbClient.from('documentos').insert({ nome, categoria, versao, arquivo_url: publicUrl }).select().single();
+  if (!nome) { showToast('Informe o nome do documento.','err'); return; }
+
+  const modoLink = document.getElementById('docModoLink').style.display !== 'none';
+  let arquivo_url = null;
+
+  if (modoLink) {
+    // Modo link externo
+    arquivo_url = document.getElementById('docLink').value.trim();
+    if (!arquivo_url) { showToast('Cole o link do documento.','err'); return; }
+  } else {
+    // Modo upload
+    const arquivo = document.getElementById('docArquivo').files[0];
+    if (!arquivo) { showToast('Selecione um arquivo.','err'); return; }
+    showToast('Fazendo upload...','ok');
+    const path = categoria + '/' + Date.now() + '_' + sanitizarNomeArquivo(arquivo.name);
+    const { error: upErr } = await sbClient.storage.from('documentos').upload(path, arquivo);
+    if (upErr) { showToast('Erro no upload: '+upErr.message,'err'); return; }
+    const { data: { publicUrl } } = sbClient.storage.from('documentos').getPublicUrl(path);
+    arquivo_url = publicUrl;
+  }
+
+  const { data, error } = await sbClient.from('documentos').insert({ nome, categoria, versao, arquivo_url }).select().single();
   if (error) { showToast('Erro ao salvar: '+error.message,'err'); return; }
   await logAudit('documentos','INSERT',data.id,null,{nome,categoria});
-  closeModal('modalDocumento'); showToast('Documento salvo!','ok'); loadDocumentos();
+  closeModal('modalDocumento');
+  showToast('Documento salvo!','ok');
+  loadDocumentos();
 }
 
 async function deletarDocumento(id) {
