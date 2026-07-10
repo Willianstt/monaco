@@ -3738,14 +3738,26 @@ async function extrairBoleto() {
         })
       });
       const data = await res.json();
-      const text = (data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
-      const boleto = JSON.parse(text);
-      if (boleto.fornecedor) document.getElementById('cpFornecedor').value = boleto.fornecedor;
-      if (boleto.descricao) document.getElementById('cpDescricao').value = boleto.descricao;
-      if (boleto.valor) document.getElementById('cpValor').value = boleto.valor;
-      if (boleto.vencimento) document.getElementById('cpVencimento').value = boleto.vencimento;
-      if (boleto.categoria) document.getElementById('cpCategoria').value = boleto.categoria;
-      showToast('Dados extraídos com sucesso!','ok');
+      console.log('API boleto response:', JSON.stringify(data).substring(0,500));
+      if (data.error) { showToast('Erro API: '+data.error.message,'err'); return; }
+      const rawText = data.content?.[0]?.text||'{}';
+      console.log('Raw text:', rawText);
+      const text = rawText.replace(/```json|```/g,'').trim();
+      let boleto = {};
+      try {
+        boleto = JSON.parse(text);
+      } catch(pe) {
+        const match = text.match(/\{[\s\S]*?\}/);
+        if (match) try { boleto = JSON.parse(match[0]); } catch(e2) {}
+      }
+      console.log('Boleto parseado:', boleto);
+      let preencheu = 0;
+      if (boleto.fornecedor) { document.getElementById('cpFornecedor').value = boleto.fornecedor; preencheu++; }
+      if (boleto.descricao) { document.getElementById('cpDescricao').value = boleto.descricao; preencheu++; }
+      if (boleto.valor) { document.getElementById('cpValor').value = boleto.valor; preencheu++; }
+      if (boleto.vencimento) { document.getElementById('cpVencimento').value = boleto.vencimento; preencheu++; }
+      if (boleto.categoria && boleto.categoria !== 'outros') document.getElementById('cpCategoria').value = boleto.categoria;
+      showToast(preencheu > 0 ? preencheu+' campos preenchidos!' : 'Nenhum dado extraído — preencha manualmente.', preencheu > 0 ? 'ok' : 'err');
     } catch(err) { showToast('Erro ao extrair: '+err.message,'err'); }
   };
   reader.readAsDataURL(file);
