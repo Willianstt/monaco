@@ -3913,6 +3913,38 @@ async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs
   const svcMap = {};
   (svcData||[]).forEach(s => svcMap[s.id] = s);
 
+  // Buscar dados do Cartão CNPJ no banco de documentos
+  let pagadorNome = 'STT Construtora e Incorporadora';
+  let pagadorEndereco = 'Av. Nereu Ramos, 1271 · Chapecó, SC';
+  let pagadorCnpj = '';
+  try {
+    const { data: docCnpj } = await sbClient.from('documentos').select('arquivo_url,nome')
+      .ilike('nome','%CNPJ%').limit(1).single();
+    if (docCnpj?.arquivo_url) {
+      const claudeKey = localStorage.getItem('claude_key')||'';
+      if (claudeKey) {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+          body: JSON.stringify({
+            model:'claude-sonnet-4-6', max_tokens:400,
+            system:'Extraia dados do cartão CNPJ. Responda SOMENTE com JSON: {"razao_social":"","cnpj":"","endereco":"","municipio":"","uf":""}. Sem texto adicional.',
+            messages:[{role:'user',content:[
+              {type:'document',source:{type:'url',url:docCnpj.arquivo_url}},
+              {type:'text',text:'Extraia razão social, CNPJ, endereço completo, município e UF deste cartão CNPJ.'}
+            ]}]
+          })
+        });
+        const data = await res.json();
+        const text = (data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
+        const cnpjData = JSON.parse(text);
+        if (cnpjData.razao_social) pagadorNome = cnpjData.razao_social;
+        if (cnpjData.cnpj) pagadorCnpj = cnpjData.cnpj;
+        if (cnpjData.endereco) pagadorEndereco = cnpjData.endereco + (cnpjData.municipio ? ' · ' + cnpjData.municipio : '') + (cnpjData.uf ? '/' + cnpjData.uf : '');
+      }
+    }
+  } catch(e) { console.log('CNPJ não encontrado, usando dados padrão'); }
+
   const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   const mesLabel = mes ? new Date(mes+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) : '';
 
@@ -3956,8 +3988,9 @@ async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
   <div class="bloco">
     <div class="label">Pagador</div>
-    <div class="valor" style="font-weight:600;">STT Construtora e Incorporadora</div>
-    <div class="valor">Av. Nereu Ramos, 1271 · Chapecó, SC</div>
+    <div class="valor" style="font-weight:600;">${pagadorNome}</div>
+    <div class="valor">${pagadorEndereco}</div>
+    ${pagadorCnpj ? '<div class="valor">CNPJ: '+pagadorCnpj+'</div>' : ''}
   </div>
   <div class="bloco">
     <div class="label">Recebedor</div>
@@ -3980,14 +4013,14 @@ async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs
 ${obs?'<div style="font-size:12px;color:#666;margin-bottom:1.5rem;"><strong>Observação:</strong> '+obs+'</div>':''}
 
 <div style="font-size:13px;margin-bottom:2rem;padding:1rem;background:#f9f9f9;border-radius:8px;">
-  Declaro ter recebido da <strong>STT Construtora e Incorporadora</strong> a importância de 
+  Declaro ter recebido de <strong>${pagadorNome}</strong> a importância de 
   <strong>R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong> 
   referente aos serviços prestados no mês de <strong>${mesLabel}</strong>, 
   conforme discriminado acima.
 </div>
 
 <div class="assinatura">
-  <div class="assin-box">STT Construtora e Incorporadora<br>Pagador</div>
+  <div class="assin-box">${pagadorNome}<br>Pagador</div>
   <div class="assin-box">${prest.nome}<br>Recebedor</div>
 </div>
 
