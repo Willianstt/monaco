@@ -2530,7 +2530,7 @@ async function importarOrcamento(fornId) {
       const mtype = file.type || 'application/pdf';
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+        headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body: JSON.stringify({
           model:'claude-sonnet-4-6', max_tokens:2000,
           system:'Extraia itens de orçamento. Responda SOMENTE com JSON array: [{"descricao":"...","unidade":"un","valor_unitario":0.00,"marca":""}]. Sem texto adicional.',
@@ -3046,7 +3046,7 @@ async function sendIA() {
     }
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:500, system:`Você é o assistente do sistema de gestão do Mônaco Residence. Contexto atual: ${context}. Responda de forma direta e objetiva em português.`, messages:[{role:'user',content:q}] })
     });
     const data = await res.json();
@@ -3722,7 +3722,12 @@ async function extrairBoleto() {
       const mtype = file.type || 'application/pdf';
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key':claudeKey,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
         body: JSON.stringify({
           model:'claude-sonnet-4-6', max_tokens:800,
           system:'Extraia dados de boleto bancário. Responda SOMENTE com JSON: {"fornecedor":"","descricao":"","valor":0.00,"vencimento":"YYYY-MM-DD","categoria":"outros"}. Sem texto adicional.',
@@ -3925,7 +3930,7 @@ async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs
       if (claudeKey) {
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method:'POST',
-          headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+          headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
           body: JSON.stringify({
             model:'claude-sonnet-4-6', max_tokens:400,
             system:'Extraia dados do cartão CNPJ. Responda SOMENTE com JSON: {"razao_social":"","cnpj":"","endereco":"","municipio":"","uf":""}. Sem texto adicional.',
