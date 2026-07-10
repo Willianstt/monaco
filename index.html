@@ -712,6 +712,14 @@ textarea.form-input{min-height:80px;resize:vertical;}
         <div class="form-group"><label class="form-label">Vencimento</label><input type="date" class="form-input" id="cpVencimento"></div>
       </div>
     </div>
+      <div style="height:0.5px;background:var(--border);margin:0.5rem 0 1rem;"></div>
+      <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.75rem;">Importar boleto (extrai dados automaticamente)</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="file" class="form-input" id="cpBoleto" accept=".pdf,.jpg,.jpeg,.png" style="flex:1;cursor:pointer;">
+        <button class="btn btn-sm" onclick="extrairBoleto()" style="white-space:nowrap;flex-shrink:0;"><i class="ti ti-scan" aria-hidden="true"></i> Extrair</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:6px;">Envie o PDF ou foto do boleto — os dados serão preenchidos automaticamente.</div>
+    </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('modalContaPagar')">Cancelar</button><button class="btn btn-primary" onclick="salvarContaPagar()">Salvar conta</button></div>
   </div>
 </div>
@@ -1381,7 +1389,7 @@ async function loadAuditoria() {
 // CLIENTES
 // ============================================================
 async function loadClientes() {
-  const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',21).order('numero');
+  const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',21).order('andar').order('posicao');
   if (!unidades) return;
   const total = unidades.length;
   const vendidas = unidades.filter(u=>u.status==='vendida').length;
@@ -1857,7 +1865,7 @@ function renderUnidades(unidades) {
   });
 
   let html = '';
-  Object.keys(andares).sort((a,b)=>parseInt(b)-parseInt(a)).forEach(andar => {
+  Object.keys(andares).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(andar => {
     const units = andares[andar];
     if (isSingleAndar) {
       // Layout andar único: 2x2 + corredor centralizado embaixo
@@ -2359,7 +2367,7 @@ async function deletarConta(id) {
 let _todosForns = [];
 
 async function loadFornecedores() {
-  const { data } = await sbClient.from('fornecedores').select('*').order('nome');
+  const { data } = await sbClient.from('fornecedores').select('*').order('categoria').order('nome');
   _todosForns = data || [];
   _fornMap = {};
   _todosForns.forEach(f => _fornMap[f.id] = f.nome);
@@ -3491,8 +3499,11 @@ async function verificarNotificacoes() {
 // ============================================================
 // PRESTADORES DE SERVIÇOS
 // ============================================================
+let _todosPrests = [];
+
 async function loadPrestadores() {
   const { data: prestadores } = await sbClient.from('prestadores').select('*').order('nome');
+  _todosPrests = prestadores || [];
   const wrap = document.getElementById('prestadoresWrap');
   if (!wrap) return;
   if (!prestadores || !prestadores.length) {
@@ -3562,7 +3573,7 @@ async function abrirDetalhePrestador(prestadorId, nome) {
       <div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
           <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Medições mensais · Total: R$ ${totalMed.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-          <button class="btn btn-sm" onclick="openModal('modalMedicao')"><i class="ti ti-plus"></i> Nova medição</button>
+          <button class="btn btn-sm" onclick="closeModal('modalUnidade');setTimeout(()=>abrirModalMedicaoCompleta(''+prestadorId+'',''+nome+''),200)"><i class="ti ti-plus"></i> Nova medição</button>
         </div>
         ${(medicoes||[]).length===0?'<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhuma medição registrada.</div>':
         `<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
@@ -3693,6 +3704,300 @@ async function deletarFaltante(id) {
   if (!confirm('Remover este item?')) return;
   await sbClient.from('materiais_faltantes').delete().eq('id',id);
   showToast('Removido.','ok'); loadMateriaiFaltantes();
+}
+
+// ============================================================
+// EXTRAÇÃO DE BOLETO COM IA
+// ============================================================
+async function extrairBoleto() {
+  const file = document.getElementById('cpBoleto')?.files[0];
+  if (!file) { showToast('Selecione um arquivo de boleto.','err'); return; }
+  const claudeKey = localStorage.getItem('claude_key')||'';
+  if (!claudeKey) { showToast('Configure a chave Claude para extrair boletos.','err'); return; }
+  showToast('Extraindo dados do boleto...','ok');
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const base64 = e.target.result.split(',')[1];
+      const mtype = file.type || 'application/pdf';
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01'},
+        body: JSON.stringify({
+          model:'claude-sonnet-4-6', max_tokens:800,
+          system:'Extraia dados de boleto bancário. Responda SOMENTE com JSON: {"fornecedor":"","descricao":"","valor":0.00,"vencimento":"YYYY-MM-DD","categoria":"outros"}. Sem texto adicional.',
+          messages:[{role:'user',content:[
+            {type:'document',source:{type:'base64',media_type:mtype,data:base64}},
+            {type:'text',text:'Extraia os dados deste boleto: beneficiário/empresa, descrição, valor, data de vencimento.'}
+          ]}]
+        })
+      });
+      const data = await res.json();
+      const text = (data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
+      const boleto = JSON.parse(text);
+      if (boleto.fornecedor) document.getElementById('cpFornecedor').value = boleto.fornecedor;
+      if (boleto.descricao) document.getElementById('cpDescricao').value = boleto.descricao;
+      if (boleto.valor) document.getElementById('cpValor').value = boleto.valor;
+      if (boleto.vencimento) document.getElementById('cpVencimento').value = boleto.vencimento;
+      if (boleto.categoria) document.getElementById('cpCategoria').value = boleto.categoria;
+      showToast('Dados extraídos com sucesso!','ok');
+    } catch(err) { showToast('Erro ao extrair: '+err.message,'err'); }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ============================================================
+// MEDIÇÕES DE PRESTADOR MELHORADAS + RECIBO
+// ============================================================
+async function abrirModalMedicaoCompleta(prestadorId, prestadorNome) {
+  document.getElementById('medPrestadorId').value = prestadorId;
+  document.getElementById('modalMedicaoTitle').textContent = 'Nova medição — ' + prestadorNome;
+
+  // Carregar serviços do prestador
+  const { data: servicos } = await sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao');
+
+  const body = document.querySelector('#modalMedicao .modal-body');
+  body.innerHTML = '';
+
+  // Mês e status
+  const row1 = div({style:'display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;'});
+  const grMes = div({});
+  grMes.appendChild(el('label',{class:'form-label',text:'Mês de referência'}));
+  const inpMes = el('input',{type:'month',class:'form-input',id:'medMes'});
+  inpMes.valueAsDate = new Date();
+  grMes.appendChild(inpMes);
+  const grSt = div({});
+  grSt.appendChild(el('label',{class:'form-label',text:'Status'}));
+  const selSt = el('select',{class:'form-select',id:'medStatus'});
+  ['aberta|Aberta','aprovada|Aprovada','paga|Paga'].forEach(o => {
+    const [v,t] = o.split('|');
+    selSt.appendChild(el('option',{value:v,text:t}));
+  });
+  grSt.appendChild(selSt);
+  row1.appendChild(grMes); row1.appendChild(grSt);
+  body.appendChild(row1);
+
+  // Itens de serviço
+  body.appendChild(div({style:'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;', text:'Serviços realizados'}));
+  const itensWrap = div({id:'medItensWrap', style:'margin-bottom:1rem;'});
+  body.appendChild(itensWrap);
+
+  function adicionarItemMedicao(servicoPreSel=null) {
+    const itemDiv = div({style:'display:grid;grid-template-columns:1fr 80px 100px 32px;gap:6px;align-items:center;margin-bottom:6px;'});
+    const selSvc = el('select',{class:'form-select'});
+    selSvc.appendChild(el('option',{value:'',text:'Selecionar serviço...'}));
+    (servicos||[]).forEach(s => {
+      const o = el('option',{value:s.id,text:s.descricao+' ('+s.unidade+')',style:''});
+      o.dataset.valor = s.valor_unitario;
+      o.dataset.unidade = s.unidade;
+      selSvc.appendChild(o);
+    });
+    if (servicoPreSel) selSvc.value = servicoPreSel;
+
+    const inpQtd = el('input',{type:'number',class:'form-input',placeholder:'Qtd',step:'0.01',style:'text-align:center;'});
+    const inpVlr = el('input',{type:'number',class:'form-input',placeholder:'R$',step:'0.01',style:'text-align:right;color:var(--gold);'});
+
+    // Calcular valor ao mudar serviço ou quantidade
+    const calcItem = () => {
+      const opt = selSvc.options[selSvc.selectedIndex];
+      const valorUnit = parseFloat(opt?.dataset?.valor||0);
+      const qtd = parseFloat(inpQtd.value)||0;
+      if (valorUnit && qtd) inpVlr.value = (valorUnit*qtd).toFixed(2);
+      atualizarTotalMedicao();
+    };
+    selSvc.addEventListener('change', calcItem);
+    inpQtd.addEventListener('input', calcItem);
+    inpVlr.addEventListener('input', atualizarTotalMedicao);
+
+    const btnRem = btn({style:'background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:0;'}, [icon('x')]);
+    btnRem.addEventListener('click', () => { itemDiv.remove(); atualizarTotalMedicao(); });
+
+    itemDiv.appendChild(selSvc);
+    itemDiv.appendChild(inpQtd);
+    itemDiv.appendChild(inpVlr);
+    itemDiv.appendChild(btnRem);
+    itensWrap.appendChild(itemDiv);
+  }
+
+  adicionarItemMedicao();
+
+  const btnAdd = btn({class:'btn btn-sm', style:'margin-bottom:1rem;'}, [icon('plus')]);
+  btnAdd.appendChild(document.createTextNode(' Adicionar serviço'));
+  btnAdd.addEventListener('click', () => adicionarItemMedicao());
+  body.appendChild(btnAdd);
+
+  // Total
+  const totalRow = div({style:'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);margin-bottom:1rem;'});
+  totalRow.appendChild(div({style:'font-size:13px;font-family:Arial,sans-serif;color:var(--text-muted);',text:'Total da medição:'}));
+  const totalEl = div({id:'medTotal',style:'font-size:20px;font-weight:500;color:var(--gold);font-family:Arial,sans-serif;',text:'R$ 0,00'});
+  totalRow.appendChild(totalEl);
+  body.appendChild(totalRow);
+
+  // Observação
+  const grObs = div({class:'form-group'});
+  grObs.appendChild(el('label',{class:'form-label',text:'Observação'}));
+  grObs.appendChild(el('input',{type:'text',class:'form-input',id:'medObs',placeholder:'Opcional'}));
+  body.appendChild(grObs);
+
+  openModal('modalMedicao');
+
+  // Atualizar footer com botão de recibo
+  const footer = document.querySelector('#modalMedicao .modal-footer');
+  footer.innerHTML = '';
+  const btnCancel = btn({class:'btn',text:'Cancelar'});
+  btnCancel.addEventListener('click', () => closeModal('modalMedicao'));
+  const btnSalvar = btn({class:'btn btn-primary',text:'Salvar medição'});
+  btnSalvar.addEventListener('click', () => salvarMedicaoCompleta(prestadorId, prestadorNome));
+  footer.appendChild(btnCancel);
+  footer.appendChild(btnSalvar);
+}
+
+function atualizarTotalMedicao() {
+  const itens = document.querySelectorAll('#medItensWrap > div');
+  let total = 0;
+  itens.forEach(item => {
+    const inputs = item.querySelectorAll('input[type=number]');
+    if (inputs.length >= 2) total += parseFloat(inputs[1].value)||0;
+  });
+  const el = document.getElementById('medTotal');
+  if (el) el.textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+}
+
+async function salvarMedicaoCompleta(prestadorId, prestadorNome) {
+  const mes = document.getElementById('medMes').value;
+  const status = document.getElementById('medStatus').value;
+  const obs = document.getElementById('medObs').value;
+  if (!mes) { showToast('Informe o mês.','err'); return; }
+
+  const itens = document.querySelectorAll('#medItensWrap > div');
+  let total = 0;
+  const servicos = [];
+  itens.forEach(item => {
+    const sel = item.querySelector('select');
+    const inputs = item.querySelectorAll('input[type=number]');
+    if (sel?.value && inputs.length >= 2) {
+      const qtd = parseFloat(inputs[0].value)||0;
+      const vlr = parseFloat(inputs[1].value)||0;
+      total += vlr;
+      servicos.push({servico_id: sel.value, quantidade: qtd, valor: vlr});
+    }
+  });
+
+  if (!servicos.length) { showToast('Adicione pelo menos um serviço.','err'); return; }
+
+  // Salvar uma medição por serviço
+  for (const s of servicos) {
+    await sbClient.from('prestador_medicoes').insert({
+      prestador_id: prestadorId, servico_id: s.servico_id,
+      mes_referencia: mes, quantidade: s.quantidade,
+      valor_total: s.valor, status, observacao: obs
+    });
+  }
+  await logAudit('prestador_medicoes','INSERT',prestadorId,null,{mes,total,servicos:servicos.length});
+  closeModal('modalMedicao');
+  showToast('Medição salva! Total: R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
+
+  // Oferecer geração de recibo
+  if (confirm('Medição salva! Deseja gerar o recibo agora?')) {
+    gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs);
+  }
+  loadPrestadores();
+}
+
+async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs) {
+  // Buscar dados do prestador
+  const prest = _todosPrests?.find(p=>p.id===prestadorId) || {nome:prestadorNome,especialidade:'',cpf_cnpj:''};
+
+  // Buscar serviços para descrição
+  const { data: svcData } = await sbClient.from('prestador_servicos').select('*').eq('prestador_id',prestadorId);
+  const svcMap = {};
+  (svcData||[]).forEach(s => svcMap[s.id] = s);
+
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const mesLabel = mes ? new Date(mes+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) : '';
+
+  const itensHtml = servicos.map(s => {
+    const svc = svcMap[s.servico_id] || {};
+    return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+
+      (svc.descricao||'Serviço')+'</td>'+
+      '<td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">'+
+      s.quantidade+' '+(svc.unidade||'un')+'</td>'+
+      '<td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+
+      'R$ '+parseFloat(s.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td></tr>';
+  }).join('');
+
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Recibo</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;color:#222;max-width:680px;margin:2rem auto;padding:2rem;}
+  .header{text-align:center;border-bottom:2px solid #C9A84C;padding-bottom:1rem;margin-bottom:2rem;}
+  .logo{font-size:22px;font-weight:700;letter-spacing:0.1em;color:#C9A84C;text-transform:uppercase;}
+  .titulo{font-size:18px;font-weight:600;margin:1.5rem 0 0.5rem;}
+  .bloco{background:#f9f9f9;border-radius:8px;padding:1rem 1.25rem;margin-bottom:1rem;}
+  .label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;}
+  .valor{font-size:13px;color:#222;}
+  table{width:100%;border-collapse:collapse;margin-bottom:1rem;}
+  th{background:#1A1A1A;color:#C9A84C;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;}
+  .total-row{background:#f0f0f0;font-weight:700;}
+  .total-row td{padding:10px 12px;font-size:15px;}
+  .assinatura{margin-top:3rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
+  .assin-box{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#666;}
+  .footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #eee;font-size:10px;color:#aaa;text-align:center;}
+  @media print{body{margin:0;padding:1rem;} .no-print{display:none;}}
+</style></head><body>
+<div class="header">
+  <div class="logo">Mônaco Residence</div>
+  <div style="font-size:11px;color:#888;margin-top:4px;">Av. Nereu Ramos, 1271 · Chapecó, SC · STT Construtora e Incorporadora</div>
+</div>
+
+<div class="titulo">Recibo de Pagamento</div>
+<div style="font-size:12px;color:#888;margin-bottom:1.5rem;">Referência: ${mesLabel} · Emitido em ${hoje}</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+  <div class="bloco">
+    <div class="label">Pagador</div>
+    <div class="valor" style="font-weight:600;">STT Construtora e Incorporadora</div>
+    <div class="valor">Av. Nereu Ramos, 1271 · Chapecó, SC</div>
+  </div>
+  <div class="bloco">
+    <div class="label">Recebedor</div>
+    <div class="valor" style="font-weight:600;">${prest.nome}</div>
+    <div class="valor">${prest.especialidade||''}</div>
+    <div class="valor">${prest.cpf_cnpj||''}</div>
+  </div>
+</div>
+
+<table>
+  <thead><tr><th>Descrição</th><th style="text-align:center;">Quantidade</th><th style="text-align:right;">Valor</th></tr></thead>
+  <tbody>${itensHtml}
+    <tr class="total-row">
+      <td colspan="2">TOTAL</td>
+      <td style="text-align:right;">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+    </tr>
+  </tbody>
+</table>
+
+${obs?'<div style="font-size:12px;color:#666;margin-bottom:1.5rem;"><strong>Observação:</strong> '+obs+'</div>':''}
+
+<div style="font-size:13px;margin-bottom:2rem;padding:1rem;background:#f9f9f9;border-radius:8px;">
+  Declaro ter recebido da <strong>STT Construtora e Incorporadora</strong> a importância de 
+  <strong>R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong> 
+  referente aos serviços prestados no mês de <strong>${mesLabel}</strong>, 
+  conforme discriminado acima.
+</div>
+
+<div class="assinatura">
+  <div class="assin-box">STT Construtora e Incorporadora<br>Pagador</div>
+  <div class="assin-box">${prest.nome}<br>Recebedor</div>
+</div>
+
+<div class="footer">Mônaco Residence · STT Construtora e Incorporadora · Chapecó, SC</div>
+
+<div class="no-print" style="margin-top:2rem;text-align:center;">
+  <button onclick="window.print()" style="padding:10px 28px;background:#C9A84C;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Imprimir / Salvar PDF</button>
+</div>
+</body></html>`);
+  w.document.close();
 }
 
 // LOGIN com Enter
