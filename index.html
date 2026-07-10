@@ -2532,7 +2532,7 @@ async function importarOrcamento(fornId) {
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body: JSON.stringify({
-          model:'claude-sonnet-4-6', max_tokens:2000,
+          model:'claude-sonnet-4-5', max_tokens:2000,
           system:'Extraia itens de orçamento. Responda SOMENTE com JSON array: [{"descricao":"...","unidade":"un","valor_unitario":0.00,"marca":""}]. Sem texto adicional.',
           messages:[{role:'user',content:[
             {type:'document',source:{type:'base64',media_type:mtype,data:base64}},
@@ -3729,7 +3729,7 @@ async function extrairBoleto() {
           'anthropic-dangerous-direct-browser-access':'true'
         },
         body: JSON.stringify({
-          model:'claude-sonnet-4-6', max_tokens:800,
+          model:'claude-sonnet-4-5', max_tokens:800,
           system:'Extraia dados de boleto bancário. Responda SOMENTE com JSON: {"fornecedor":"","descricao":"","valor":0.00,"vencimento":"YYYY-MM-DD","categoria":"outros"}. Sem texto adicional.',
           messages:[{role:'user',content:[
             {type:'document',source:{type:'base64',media_type:mtype,data:base64}},
@@ -3944,7 +3944,7 @@ async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs
           method:'POST',
           headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
           body: JSON.stringify({
-            model:'claude-sonnet-4-6', max_tokens:400,
+            model:'claude-sonnet-4-5', max_tokens:400,
             system:'Extraia dados do cartão CNPJ. Responda SOMENTE com JSON: {"razao_social":"","cnpj":"","endereco":"","municipio":"","uf":""}. Sem texto adicional.',
             messages:[{role:'user',content:[
               {type:'document',source:{type:'url',url:docCnpj.arquivo_url}},
