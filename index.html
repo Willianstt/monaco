@@ -2594,8 +2594,12 @@ async function salvarFornecedor() {
     : document.getElementById('fornCategoria').value;
   const payload = { nome: document.getElementById('fornNome').value.trim(), categoria: cat, responsavel: document.getElementById('fornResponsavel').value, telefone: document.getElementById('fornTel').value, email: document.getElementById('fornEmail').value, status: 'ativo' };
   if (!payload.nome) { showToast('Informe o nome do fornecedor.','err'); return; }
+  console.log('Payload fornecedor:', JSON.stringify(payload));
   const { data, error } = await sbClient.from('fornecedores').insert(payload).select().single();
-  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  if (error) { 
+    console.log('Erro Supabase:', error.code, error.message, error.details, error.hint);
+    showToast('Erro: '+error.message,'err'); return; 
+  }
   await logAudit('fornecedores','INSERT',data.id,null,payload);
   closeModal('modalFornecedor'); showToast('Fornecedor salvo!','ok'); loadFornecedores();
 }
