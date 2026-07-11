@@ -4334,10 +4334,7 @@ async function reindexarParcelas() {
     return;
   }
 
-  if (!confirm('Reindexar todas as parcelas abertas pelo CUB atual de R$ ' +
-    cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '?
-
-Isso vai recalcular o valor de todas as parcelas pendentes dos contratos indexados em CUB.')) return;
+  if (!confirm('Reindexar parcelas pelo CUB: R$ ' + cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '?')) return;
 
   showToast('Reindexando...','ok');
 
