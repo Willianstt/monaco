@@ -2532,7 +2532,7 @@ async function importarOrcamento(fornId) {
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body: JSON.stringify({
-          model:'claude-sonnet-4-5', max_tokens:2000,
+          model:'claude-sonnet-4-20250514', max_tokens:2000,
           system:'Extraia itens de orçamento. Responda SOMENTE com JSON array: [{"descricao":"...","unidade":"un","valor_unitario":0.00,"marca":""}]. Sem texto adicional.',
           messages:[{role:'user',content:[
             {type:'document',source:{type:'base64',media_type:mtype,data:base64}},
@@ -3719,7 +3719,25 @@ async function extrairBoleto() {
   reader.onload = async (e) => {
     try {
       const base64 = e.target.result.split(',')[1];
-      const mtype = file.type || 'application/pdf';
+      const isImage = file.type.startsWith('image/');
+      const mtype = file.type || 'image/jpeg';
+
+      // Montar conteúdo da mensagem
+      const prompt = 'Este é um boleto bancário. Extraia: beneficiário/empresa, descrição do pagamento, valor total, data de vencimento. Responda SOMENTE com JSON válido: {"fornecedor":"","descricao":"","valor":0.00,"vencimento":"YYYY-MM-DD","categoria":"materiais"}';
+      let msgContent;
+      if (isImage) {
+        msgContent = [
+          {type:'image', source:{type:'base64', media_type:mtype, data:base64}},
+          {type:'text', text:prompt}
+        ];
+      } else {
+        // PDF como documento
+        msgContent = [
+          {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
+          {type:'text', text:prompt}
+        ];
+      }
+
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
         headers:{
@@ -3729,36 +3747,29 @@ async function extrairBoleto() {
           'anthropic-dangerous-direct-browser-access':'true'
         },
         body: JSON.stringify({
-          model:'claude-sonnet-4-5', max_tokens:800,
-          system:'Extraia dados de boleto bancário. Responda SOMENTE com JSON: {"fornecedor":"","descricao":"","valor":0.00,"vencimento":"YYYY-MM-DD","categoria":"outros"}. Sem texto adicional.',
-          messages:[{role:'user',content:[
-            {type:'document',source:{type:'base64',media_type:mtype,data:base64}},
-            {type:'text',text:'Extraia os dados deste boleto: beneficiário/empresa, descrição, valor, data de vencimento.'}
-          ]}]
+          model: 'claude-sonnet-4-20250514',
+          max_tokens:500,
+          messages:[{role:'user', content:msgContent}]
         })
       });
       const data = await res.json();
-      console.log('API boleto response:', JSON.stringify(data).substring(0,500));
+      console.log('Boleto API:', data.error || 'ok', data.content?.[0]?.text?.substring(0,200));
       if (data.error) { showToast('Erro API: '+data.error.message,'err'); return; }
       const rawText = data.content?.[0]?.text||'{}';
-      console.log('Raw text:', rawText);
       const text = rawText.replace(/```json|```/g,'').trim();
       let boleto = {};
-      try {
-        boleto = JSON.parse(text);
-      } catch(pe) {
+      try { boleto = JSON.parse(text); }
+      catch(pe) {
         const match = text.match(/\{[\s\S]*?\}/);
         if (match) try { boleto = JSON.parse(match[0]); } catch(e2) {}
       }
-      console.log('Boleto parseado:', boleto);
       let preencheu = 0;
       if (boleto.fornecedor) { document.getElementById('cpFornecedor').value = boleto.fornecedor; preencheu++; }
       if (boleto.descricao) { document.getElementById('cpDescricao').value = boleto.descricao; preencheu++; }
       if (boleto.valor) { document.getElementById('cpValor').value = boleto.valor; preencheu++; }
       if (boleto.vencimento) { document.getElementById('cpVencimento').value = boleto.vencimento; preencheu++; }
-      if (boleto.categoria && boleto.categoria !== 'outros') document.getElementById('cpCategoria').value = boleto.categoria;
-      showToast(preencheu > 0 ? preencheu+' campos preenchidos!' : 'Nenhum dado extraído — preencha manualmente.', preencheu > 0 ? 'ok' : 'err');
-    } catch(err) { showToast('Erro ao extrair: '+err.message,'err'); }
+      showToast(preencheu>0 ? preencheu+' campos preenchidos!' : 'Verifique o console — preencha manualmente.', preencheu>0?'ok':'err');
+    } catch(err) { showToast('Erro: '+err.message,'err'); }
   };
   reader.readAsDataURL(file);
 }
@@ -3944,7 +3955,7 @@ async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs
           method:'POST',
           headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
           body: JSON.stringify({
-            model:'claude-sonnet-4-5', max_tokens:400,
+            model:'claude-sonnet-4-20250514', max_tokens:400,
             system:'Extraia dados do cartão CNPJ. Responda SOMENTE com JSON: {"razao_social":"","cnpj":"","endereco":"","municipio":"","uf":""}. Sem texto adicional.',
             messages:[{role:'user',content:[
               {type:'document',source:{type:'url',url:docCnpj.arquivo_url}},
