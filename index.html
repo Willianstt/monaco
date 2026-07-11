@@ -1412,7 +1412,8 @@ async function loadAuditoria() {
 // ============================================================
 async function loadClientes() {
   // Atualizar exibição do CUB
-  _cubAtual = parseFloat(localStorage.getItem('cub_valor')||0);
+  const rawCub = localStorage.getItem('cub_valor')||'0';
+  _cubAtual = parseFloat(rawCub.replace(',','.')) || 0;
   _cubData = localStorage.getItem('cub_data')||'';
   atualizarExibicaoCUB();
   const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',20).order('andar').order('posicao');
@@ -1542,7 +1543,9 @@ async function salvarCliente() {
   const numParcelas = parseInt(document.getElementById('clienteNumParcelas').value)||0;
   const primVenc = document.getElementById('clientePrimVenc').value;
   const usaCUB = document.getElementById('clienteUsaCUB')?.checked;
-  const cubAtual = parseFloat(localStorage.getItem('cub_valor')||0);
+  const cubRaw = localStorage.getItem('cub_valor')||'0';
+  const cubAtual = parseFloat(cubRaw.replace(',','.')) || 0;
+  console.log('CUB lido:', cubRaw, '->', cubAtual, '| usaCUB:', usaCUB);
 
   if (valorVenda > 0 && numParcelas > 0 && primVenc) {
     // Se indexado em CUB, converter para reais pelo CUB atual
@@ -4192,15 +4195,22 @@ async function buscarCUB() {
 }
 
 function editarCUB() {
-  const atual = _cubAtual || '';
-  const novo = prompt('Digite o valor atual do CUB/SC (R$):', atual);
-  if (novo !== null && parseFloat(novo.replace(',','.'))) {
-    _cubAtual = parseFloat(novo.replace(',','.'));
-    _cubData = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-    localStorage.setItem('cub_valor', _cubAtual);
-    localStorage.setItem('cub_data', _cubData);
-    atualizarExibicaoCUB();
-    showToast('CUB atualizado!','ok');
+  const atual = _cubAtual ? _cubAtual.toFixed(2).replace('.',',') : '';
+  const novo = prompt('Digite o valor atual do CUB/SC (ex: 3.121,62 ou 3121.62):', atual);
+  if (novo !== null) {
+    // Aceitar formato BR (3.121,62) ou US (3121.62)
+    const limpo = novo.trim().replace(/\./g,'').replace(',','.');
+    const valor = parseFloat(limpo);
+    if (valor > 0) {
+      _cubAtual = valor;
+      _cubData = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+      localStorage.setItem('cub_valor', String(valor));
+      localStorage.setItem('cub_data', _cubData);
+      atualizarExibicaoCUB();
+      showToast('CUB atualizado: R$ '+valor.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
+    } else {
+      showToast('Valor inválido.','err');
+    }
   }
 }
 
@@ -4209,7 +4219,8 @@ function toggleCUBCliente() {
   const campos = document.getElementById('cubCampos');
   const preview = document.getElementById('cubPreviewModal');
   if (campos) campos.style.display = usa ? 'block' : 'none';
-  if (preview && _cubAtual) preview.textContent = usa ? 'CUB atual: R$ '+_cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+  const cubLido = parseFloat((localStorage.getItem('cub_valor')||'0').replace(',','.'));
+  if (preview) preview.textContent = usa && cubLido ? 'CUB atual: R$ '+cubLido.toLocaleString('pt-BR',{minimumFractionDigits:2}) : (usa ? '⚠ Digite o CUB primeiro (botão lápis)' : '');
 }
 
 // ============================================================
