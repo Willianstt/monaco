@@ -388,8 +388,7 @@ textarea.form-input{min-height:80px;resize:vertical;}
               <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;" id="cubData">Carregando...</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <button class="btn btn-sm" onclick="buscarCUB()" style="font-size:11px;padding:4px 8px;"><i class="ti ti-refresh" aria-hidden="true"></i></button>
-              <button class="btn btn-sm" onclick="editarCUB()" style="font-size:11px;padding:4px 8px;"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+              <button class="btn btn-sm" onclick="editarCUB()" style="font-size:11px;padding:4px 8px;" title="Editar CUB manualmente"><i class="ti ti-pencil" aria-hidden="true"></i></button>
             </div>
           </div>
         </div>
@@ -1542,19 +1541,51 @@ async function salvarCliente() {
   const entrada = parseFloat(document.getElementById('clienteEntrada').value)||0;
   const numParcelas = parseInt(document.getElementById('clienteNumParcelas').value)||0;
   const primVenc = document.getElementById('clientePrimVenc').value;
+  const usaCUB = document.getElementById('clienteUsaCUB')?.checked;
+  const cubAtual = parseFloat(localStorage.getItem('cub_valor')||0);
+
   if (valorVenda > 0 && numParcelas > 0 && primVenc) {
-    const saldo = valorVenda - entrada;
+    // Se indexado em CUB, converter para reais pelo CUB atual
+    const fator = (usaCUB && cubAtual > 0) ? cubAtual : 1;
+    const valorVendaRS = valorVenda * fator;
+    const entradaRS = entrada * fator;
+    const saldo = valorVendaRS - entradaRS;
     const vlrParcela = parseFloat((saldo/numParcelas).toFixed(2));
-    await sbClient.from('financeiro_unidade').insert({ unidade_id: unidadeId, valor_venda: valorVenda, entrada, num_parcelas: numParcelas, saldo_devedor: saldo });
+    // Salvar em CUB se indexado, senão em reais
+    const vlrParcelaCUB = usaCUB ? parseFloat((saldo/numParcelas/fator).toFixed(6)) : null;
+
+    await sbClient.from('financeiro_unidade').upsert({
+      unidade_id: unidadeId,
+      valor_venda: valorVendaRS,
+      entrada: entradaRS,
+      num_parcelas: numParcelas,
+      saldo_devedor: saldo,
+      indexado_cub: usaCUB ? true : false,
+      valor_venda_cub: usaCUB ? valorVenda : null,
+      cub_base: usaCUB ? cubAtual : null
+    }, {onConflict:'unidade_id'});
+
     const parcelas = [];
     const base = new Date(primVenc+'T12:00:00');
     for (let i = 0; i < numParcelas; i++) {
       const venc = new Date(base); venc.setMonth(venc.getMonth()+i);
       const today = new Date(); today.setHours(0,0,0,0);
-      parcelas.push({ unidade_id: unidadeId, cliente_id: data.id, numero: i+1, valor: vlrParcela, vencimento: venc.toISOString().split('T')[0], status: venc < today ? 'atrasado' : 'pendente' });
+      parcelas.push({
+        unidade_id: unidadeId,
+        cliente_id: data.id,
+        numero: i+1,
+        valor: vlrParcela,
+        vencimento: venc.toISOString().split('T')[0],
+        status: venc < today ? 'atrasado' : 'pendente'
+      });
     }
+    // Deletar parcelas antigas se existirem
+    await sbClient.from('parcelas').delete().eq('unidade_id', unidadeId);
     await sbClient.from('parcelas').insert(parcelas);
-    showToast('Cliente e ' + numParcelas + ' parcelas salvos!', 'ok');
+    const msg = usaCUB
+      ? 'Cliente salvo! ' + numParcelas + ' parcelas de R$ ' + vlrParcela.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' (CUB ' + valorVenda.toFixed(2).replace('.',',') + ' × ' + cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ')'
+      : 'Cliente e ' + numParcelas + ' parcelas salvos!';
+    showToast(msg, 'ok');
   } else {
     showToast('Cliente salvo com sucesso!', 'ok');
   }
@@ -3274,7 +3305,8 @@ async function abrirDetalheCliente(clienteId, nome, apt, unidadeId) {
     html += '<div style="background:var(--surface2);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem;">';
     html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">Financeiro</div>';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Valor da venda</div><div style="font-size:14px;color:var(--gold);font-family:Arial,sans-serif;font-weight:500;">R$ ' + parseFloat(fin.valor_venda||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div></div>';
+    const cubLabel = fin.indexado_cub && fin.valor_venda_cub ? ' (' + parseFloat(fin.valor_venda_cub).toFixed(4) + ' CUB)' : '';
+    html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Valor da venda</div><div style="font-size:14px;color:var(--gold);font-family:Arial,sans-serif;font-weight:500;">R$ ' + parseFloat(fin.valor_venda||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '<span style=\'font-size:10px;color:var(--text-dim);\'>'+cubLabel+'</span></div></div>';
     html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Entrada</div><div style="font-size:14px;color:var(--success);font-family:Arial,sans-serif;">R$ ' + parseFloat(fin.entrada||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div></div>';
     html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Saldo devedor</div><div style="font-size:14px;color:var(--text);font-family:Arial,sans-serif;">R$ ' + parseFloat(fin.saldo_devedor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div></div>';
     const atrStr = atrasadas > 0 ? ' <span style="color:var(--danger)">· ' + atrasadas + ' atrasada' + (atrasadas>1?'s':'') + '</span>' : '';
