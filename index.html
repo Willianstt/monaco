@@ -4135,7 +4135,8 @@ async function buscarCUB() {
     const data = await res.json();
     const html = data.contents || '';
     // Extrair valor CUB do HTML
-    const match = html.match(/R\$\s*([\d.,]+)/);
+    const numeros = (html.match(/\d{1,3}[.,]\d{3}[.,]\d{2}/g)||[]);
+    const match = numeros.length ? [null, numeros[0]] : null;
     if (match) {
       const valor = parseFloat(match[1].replace('.','').replace(',','.'));
       if (valor > 0) {
@@ -4221,8 +4222,7 @@ async function atualizarPrestador(id) {
 }
 
 async function excluirPrestador(id, nome) {
-  if (!confirm('Excluir o prestador '+nome+'?
-Isso vai remover também todos os serviços e medições.')) return;
+  if (!confirm('Excluir o prestador '+nome+'? Isso vai remover também todos os serviços e medições.')) return;
   await sbClient.from('prestadores').delete().eq('id',id);
   showToast('Prestador removido.','ok');
   loadPrestadores();
