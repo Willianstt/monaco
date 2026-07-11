@@ -1554,7 +1554,8 @@ async function salvarCliente() {
     // Salvar em CUB se indexado, senão em reais
     const vlrParcelaCUB = usaCUB ? parseFloat((saldo/numParcelas/fator).toFixed(6)) : null;
 
-    await sbClient.from('financeiro_unidade').upsert({
+    console.log('Salvando financeiro com CUB:', {fator, valorVendaRS, entradaRS, saldo, vlrParcela});
+    const {error: finErr} = await sbClient.from('financeiro_unidade').upsert({
       unidade_id: unidadeId,
       valor_venda: valorVendaRS,
       entrada: entradaRS,
@@ -1564,6 +1565,7 @@ async function salvarCliente() {
       valor_venda_cub: usaCUB ? valorVenda : null,
       cub_base: usaCUB ? cubAtual : null
     }, {onConflict:'unidade_id'});
+    if (finErr) { console.error('Erro financeiro:', finErr); showToast('Erro ao salvar financeiro: '+finErr.message,'err'); }
 
     const parcelas = [];
     const base = new Date(primVenc+'T12:00:00');
