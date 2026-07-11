@@ -388,8 +388,8 @@ textarea.form-input{min-height:80px;resize:vertical;}
               <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;" id="cubData">Carregando...</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <button class="btn btn-sm" onclick="editarCUB()" style="font-size:11px;padding:4px 8px;" title="Editar CUB manualmente"><i class="ti ti-pencil" aria-hidden="true"></i></button>
-              <button class="btn btn-sm" onclick="reindexarParcelas()" style="font-size:11px;padding:4px 8px;background:rgba(201,168,76,0.15);border-color:var(--gold);color:var(--gold);" title="Reindexar parcelas abertas pelo CUB atual"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+              <button class="btn btn-sm" onclick="buscarCUB()" style="font-size:11px;padding:4px 8px;"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+              <button class="btn btn-sm" onclick="editarCUB()" style="font-size:11px;padding:4px 8px;"><i class="ti ti-pencil" aria-hidden="true"></i></button>
             </div>
           </div>
         </div>
@@ -1413,8 +1413,7 @@ async function loadAuditoria() {
 // ============================================================
 async function loadClientes() {
   // Atualizar exibição do CUB
-  const rawCub = localStorage.getItem('cub_valor')||'0';
-  _cubAtual = parseFloat(rawCub.replace(',','.')) || 0;
+  _cubAtual = parseFloat(localStorage.getItem('cub_valor')||0);
   _cubData = localStorage.getItem('cub_data')||'';
   atualizarExibicaoCUB();
   const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',20).order('andar').order('posicao');
@@ -1543,58 +1542,19 @@ async function salvarCliente() {
   const entrada = parseFloat(document.getElementById('clienteEntrada').value)||0;
   const numParcelas = parseInt(document.getElementById('clienteNumParcelas').value)||0;
   const primVenc = document.getElementById('clientePrimVenc').value;
-  const usaCUB = document.getElementById('clienteUsaCUB')?.checked;
-  const cubRaw = localStorage.getItem('cub_valor')||'0';
-  // Converter formato BR (3.121,62) ou US (3121.62) para número
-  const cubAtual = parseFloat(cubRaw.indexOf(',') >= 0
-    ? cubRaw.replace(/\./g,'').replace(',','.')
-    : cubRaw) || 0;
-  console.log('CUB lido:', cubRaw, '->', cubAtual, '| usaCUB:', usaCUB);
-
   if (valorVenda > 0 && numParcelas > 0 && primVenc) {
-    // Se indexado em CUB, converter para reais pelo CUB atual
-    const fator = (usaCUB && cubAtual > 0) ? cubAtual : 1;
-    const valorVendaRS = valorVenda * fator;
-    const entradaRS = entrada * fator;
-    const saldo = valorVendaRS - entradaRS;
+    const saldo = valorVenda - entrada;
     const vlrParcela = parseFloat((saldo/numParcelas).toFixed(2));
-    // Salvar em CUB se indexado, senão em reais
-    const vlrParcelaCUB = usaCUB ? parseFloat((saldo/numParcelas/fator).toFixed(6)) : null;
-
-    console.log('Salvando financeiro com CUB:', {fator, valorVendaRS, entradaRS, saldo, vlrParcela});
-    const {error: finErr} = await sbClient.from('financeiro_unidade').upsert({
-      unidade_id: unidadeId,
-      valor_venda: valorVendaRS,
-      entrada: entradaRS,
-      num_parcelas: numParcelas,
-      saldo_devedor: saldo,
-      indexado_cub: usaCUB ? true : false,
-      valor_venda_cub: usaCUB ? valorVenda : null,
-      cub_base: usaCUB ? cubAtual : null
-    }, {onConflict:'unidade_id'});
-    if (finErr) { console.error('Erro financeiro:', finErr); showToast('Erro ao salvar financeiro: '+finErr.message,'err'); }
-
+    await sbClient.from('financeiro_unidade').insert({ unidade_id: unidadeId, valor_venda: valorVenda, entrada, num_parcelas: numParcelas, saldo_devedor: saldo });
     const parcelas = [];
     const base = new Date(primVenc+'T12:00:00');
     for (let i = 0; i < numParcelas; i++) {
       const venc = new Date(base); venc.setMonth(venc.getMonth()+i);
       const today = new Date(); today.setHours(0,0,0,0);
-      parcelas.push({
-        unidade_id: unidadeId,
-        cliente_id: data.id,
-        numero: i+1,
-        valor: vlrParcela,
-        vencimento: venc.toISOString().split('T')[0],
-        status: venc < today ? 'atrasado' : 'pendente'
-      });
+      parcelas.push({ unidade_id: unidadeId, cliente_id: data.id, numero: i+1, valor: vlrParcela, vencimento: venc.toISOString().split('T')[0], status: venc < today ? 'atrasado' : 'pendente' });
     }
-    // Deletar parcelas antigas se existirem
-    await sbClient.from('parcelas').delete().eq('unidade_id', unidadeId);
     await sbClient.from('parcelas').insert(parcelas);
-    const msg = usaCUB
-      ? 'Cliente salvo! ' + numParcelas + ' parcelas de R$ ' + vlrParcela.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' (CUB ' + valorVenda.toFixed(2).replace('.',',') + ' × ' + cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ')'
-      : 'Cliente e ' + numParcelas + ' parcelas salvos!';
-    showToast(msg, 'ok');
+    showToast('Cliente e ' + numParcelas + ' parcelas salvos!', 'ok');
   } else {
     showToast('Cliente salvo com sucesso!', 'ok');
   }
@@ -1629,55 +1589,12 @@ async function atualizarCliente(id) {
   const { error } = await sbClient.from('clientes').update(payload).eq('id', id);
   if (error) { showToast('Erro: '+error.message,'err'); return; }
   await logAudit('clientes','UPDATE',id,null,payload);
-
-  // Buscar unidade_id do cliente
-  const { data: cli } = await sbClient.from('clientes').select('unidade_id').eq('id',id).single();
-  const unidadeId = cli?.unidade_id;
-
-  // Recalcular parcelas se dados financeiros foram informados
-  const valorVenda = parseFloat(document.getElementById('clienteValorVenda').value)||0;
-  const entrada = parseFloat(document.getElementById('clienteEntrada').value)||0;
-  const numParcelas = parseInt(document.getElementById('clienteNumParcelas').value)||0;
-  const primVenc = document.getElementById('clientePrimVenc').value;
-  const usaCUB = document.getElementById('clienteUsaCUB')?.checked;
-  const cubRaw = localStorage.getItem('cub_valor')||'0';
-  const cubAtual = parseFloat(cubRaw.replace(',','.').replace(/\./g, (m,o,s) => s.indexOf(',') > o ? '' : '.')) || 0;
-  console.log('Atualizar - CUB:', cubAtual, 'usaCUB:', usaCUB, 'valor:', valorVenda);
-
-  if (unidadeId && valorVenda > 0 && numParcelas > 0 && primVenc) {
-    const fator = (usaCUB && cubAtual > 0) ? cubAtual : 1;
-    const valorVendaRS = valorVenda * fator;
-    const entradaRS = entrada * fator;
-    const saldo = valorVendaRS - entradaRS;
-    const vlrParcela = parseFloat((saldo / numParcelas).toFixed(2));
-    console.log('Parcela calculada:', vlrParcela, 'fator:', fator);
-
-    await sbClient.from('financeiro_unidade').upsert({
-      unidade_id: unidadeId, valor_venda: valorVendaRS, entrada: entradaRS,
-      num_parcelas: numParcelas, saldo_devedor: saldo,
-      indexado_cub: usaCUB || false,
-      valor_venda_cub: usaCUB ? valorVenda : null,
-      cub_base: usaCUB ? cubAtual : null
-    }, {onConflict: 'unidade_id'});
-
-    await sbClient.from('parcelas').delete().eq('unidade_id', unidadeId);
-    const parcelas = [];
-    const base = new Date(primVenc + 'T12:00:00');
-    for (let i = 0; i < numParcelas; i++) {
-      const venc = new Date(base); venc.setMonth(venc.getMonth() + i);
-      const today = new Date(); today.setHours(0,0,0,0);
-      parcelas.push({ unidade_id: unidadeId, cliente_id: id, numero: i+1, valor: vlrParcela, vencimento: venc.toISOString().split('T')[0], status: venc < today ? 'atrasado' : 'pendente' });
-    }
-    await sbClient.from('parcelas').insert(parcelas);
-    showToast('Cliente e parcelas atualizados! R$ ' + vlrParcela.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' x ' + numParcelas, 'ok');
-  } else {
-    showToast('Cliente atualizado!', 'ok');
-  }
-
+  // Resetar modal
   document.getElementById('clienteUnidade').disabled = false;
   document.getElementById('btnSalvarCliente').textContent = 'Salvar cliente';
   document.getElementById('btnSalvarCliente').onclick = () => salvarCliente();
   closeModal('modalCliente');
+  showToast('Cliente atualizado!','ok');
   loadClientes();
 }
 
@@ -3357,8 +3274,7 @@ async function abrirDetalheCliente(clienteId, nome, apt, unidadeId) {
     html += '<div style="background:var(--surface2);border-radius:var(--radius-lg);padding:1rem;margin-bottom:1rem;">';
     html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem;">Financeiro</div>';
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-    const cubLabel = fin.indexado_cub && fin.valor_venda_cub ? ' (' + parseFloat(fin.valor_venda_cub).toFixed(4) + ' CUB)' : '';
-    html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Valor da venda</div><div style="font-size:14px;color:var(--gold);font-family:Arial,sans-serif;font-weight:500;">R$ ' + parseFloat(fin.valor_venda||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '<span style=\'font-size:10px;color:var(--text-dim);\'>'+cubLabel+'</span></div></div>';
+    html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Valor da venda</div><div style="font-size:14px;color:var(--gold);font-family:Arial,sans-serif;font-weight:500;">R$ ' + parseFloat(fin.valor_venda||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div></div>';
     html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Entrada</div><div style="font-size:14px;color:var(--success);font-family:Arial,sans-serif;">R$ ' + parseFloat(fin.entrada||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div></div>';
     html += '<div><div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;">Saldo devedor</div><div style="font-size:14px;color:var(--text);font-family:Arial,sans-serif;">R$ ' + parseFloat(fin.saldo_devedor||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</div></div>';
     const atrStr = atrasadas > 0 ? ' <span style="color:var(--danger)">· ' + atrasadas + ' atrasada' + (atrasadas>1?'s':'') + '</span>' : '';
@@ -3706,8 +3622,8 @@ async function abrirDetalhePrestador(prestadorId, nome) {
         ${(medicoes||[]).length===0?'<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhuma medição registrada.</div>':
         `<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
           <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">
-            <thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Mês</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Status</th></tr></thead>
-            <tbody>${(medicoes||[]).map(m=>`<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);"><td style="padding:8px 12px;color:var(--text-muted);">${m.mes_referencia}</td><td style="padding:8px 12px;color:var(--text-muted);">${m.prestador_servicos?.descricao||'—'}</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ ${parseFloat(m.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="padding:8px 12px;"><span class="status-badge ${medCls[m.status]||'badge-gray'}">${medLbl[m.status]||m.status}</span></td></tr>`).join('')}</tbody>
+            <thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Mês</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Status</th><th style="padding:8px 12px;"></th></tr></thead>
+            <tbody id="medTbody"></tbody>
           </table></div>`}
       </div>
     </div>`;
@@ -3716,6 +3632,30 @@ async function abrirDetalhePrestador(prestadorId, nome) {
   setTimeout(() => {
     const btnMed = document.getElementById('btnNovaMedicaoPrest');
     if (btnMed) btnMed.addEventListener('click', () => abrirModalMedicaoCompleta(prestadorId, nome));
+    // Popular tbody de medições
+    const tbody = document.getElementById('medTbody');
+    if (tbody && medicoes && medicoes.length) {
+      tbody.innerHTML = '';
+      medicoes.forEach((m) => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:0.5px solid rgba(201,168,76,0.06);';
+        tr.innerHTML =
+          '<td style="padding:8px 12px;color:var(--text-muted);">'+m.mes_referencia+'</td>'+
+          '<td style="padding:8px 12px;color:var(--text-muted);">'+(m.prestador_servicos&&m.prestador_servicos.descricao?m.prestador_servicos.descricao:'Múltiplos')+'</td>'+
+          '<td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ '+parseFloat(m.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>'+
+          '<td style="padding:8px 12px;"><span class="status-badge '+(medCls[m.status]||'badge-gray')+'">'+(medLbl[m.status]||m.status)+'</span></td>';
+        const td = document.createElement('td');
+        td.style.cssText = 'padding:4px 8px;';
+        const btnEd = document.createElement('button');
+        btnEd.textContent = 'Editar';
+        btnEd.style.cssText = 'font-size:11px;background:none;border:0.5px solid var(--gold);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--gold);';
+        const mesRef = m.mes_referencia; const stRef = m.status||'aberta';
+        btnEd.addEventListener('click', () => editarMedicao(prestadorId, nome, mesRef, stRef));
+        td.appendChild(btnEd);
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      });
+    }
   }, 100);
 }
 
@@ -3910,487 +3850,207 @@ async function extrairBoleto() {
 // ============================================================
 // MEDIÇÕES DE PRESTADOR MELHORADAS + RECIBO
 // ============================================================
-async function abrirModalMedicaoCompleta(prestadorId, prestadorNome) {
+async function abrirModalMedicaoCompleta(prestadorId, prestadorNome, medicaoExistente=null) {
   document.getElementById('medPrestadorId').value = prestadorId;
-  document.getElementById('modalMedicaoTitle').textContent = 'Nova medição — ' + prestadorNome;
+  document.getElementById('modalMedicaoTitle').textContent = (medicaoExistente ? 'Editar' : 'Nova') + ' medição — ' + prestadorNome;
 
-  // Carregar serviços do prestador
   const { data: servicos } = await sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao');
 
   const body = document.querySelector('#modalMedicao .modal-body');
   body.innerHTML = '';
 
-  // Mês e status
+  // Linha 1: mês + status
   const row1 = div({style:'display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;'});
   const grMes = div({});
   grMes.appendChild(el('label',{class:'form-label',text:'Mês de referência'}));
   const inpMes = el('input',{type:'month',class:'form-input',id:'medMes'});
-  inpMes.valueAsDate = new Date();
+  if (medicaoExistente) inpMes.value = medicaoExistente.mes_referencia;
+  else { const d = new Date(); inpMes.value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
   grMes.appendChild(inpMes);
   const grSt = div({});
   grSt.appendChild(el('label',{class:'form-label',text:'Status'}));
   const selSt = el('select',{class:'form-select',id:'medStatus'});
   ['aberta|Aberta','aprovada|Aprovada','paga|Paga'].forEach(o => {
     const [v,t] = o.split('|');
-    selSt.appendChild(el('option',{value:v,text:t}));
+    const opt = el('option',{value:v,text:t});
+    if (medicaoExistente && medicaoExistente.status === v) opt.selected = true;
+    selSt.appendChild(opt);
   });
   grSt.appendChild(selSt);
-  row1.appendChild(grMes); row1.appendChild(grSt);
+  row1.appendChild(grMes);
+  row1.appendChild(grSt);
   body.appendChild(row1);
 
   // Itens de serviço
-  body.appendChild(div({style:'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;', text:'Serviços realizados'}));
-  const itensWrap = div({id:'medItensWrap', style:'margin-bottom:1rem;'});
+  body.appendChild(div({style:'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;',text:'Serviços realizados'}));
+
+  const itensWrap = div({id:'medItensWrap',style:'margin-bottom:0.75rem;'});
+
+  // Header
+  const hdr = div({style:'display:grid;grid-template-columns:1fr 90px 110px 32px;gap:6px;margin-bottom:4px;'});
+  ['Serviço','Qtd','Valor (R$)',''].forEach(t => hdr.appendChild(div({style:'font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;',text:t})));
+  itensWrap.appendChild(hdr);
   body.appendChild(itensWrap);
 
-  function adicionarItemMedicao(servicoPreSel=null) {
-    const itemDiv = div({style:'display:grid;grid-template-columns:1fr 80px 100px 32px;gap:6px;align-items:center;margin-bottom:6px;'});
-    const selSvc = el('select',{class:'form-select'});
-    selSvc.appendChild(el('option',{value:'',text:'Selecionar serviço...'}));
+  function addItem(svcId, qtd, vlr) {
+    const row = div({style:'display:grid;grid-template-columns:1fr 90px 110px 32px;gap:6px;align-items:center;margin-bottom:6px;'});
+    const selSvc = el('select',{class:'form-select',style:'font-size:12px;'});
+    selSvc.appendChild(el('option',{value:'',text:'Selecionar...'}));
     (servicos||[]).forEach(s => {
-      const o = el('option',{value:s.id,text:s.descricao+' ('+s.unidade+')',style:''});
+      const o = el('option',{value:s.id,text:s.descricao+' ('+s.unidade+')'});
       o.dataset.valor = s.valor_unitario;
-      o.dataset.unidade = s.unidade;
+      if (svcId && s.id === svcId) o.selected = true;
       selSvc.appendChild(o);
     });
-    if (servicoPreSel) selSvc.value = servicoPreSel;
-
-    const inpQtd = el('input',{type:'number',class:'form-input',placeholder:'Qtd',step:'0.01',style:'text-align:center;'});
-    const inpVlr = el('input',{type:'number',class:'form-input',placeholder:'R$',step:'0.01',style:'text-align:right;color:var(--gold);'});
-
-    // Calcular valor ao mudar serviço ou quantidade
-    const calcItem = () => {
+    const inpQtd = el('input',{type:'number',class:'form-input',placeholder:'Qtd',step:'0.001',style:'text-align:center;font-size:13px;'});
+    if (qtd) inpQtd.value = qtd;
+    const inpVlr = el('input',{type:'number',class:'form-input',placeholder:'R$',step:'0.01',style:'text-align:right;color:var(--gold);font-size:13px;font-weight:500;'});
+    if (vlr) inpVlr.value = vlr;
+    const calc = () => {
       const opt = selSvc.options[selSvc.selectedIndex];
-      const valorUnit = parseFloat(opt?.dataset?.valor||0);
-      const qtd = parseFloat(inpQtd.value)||0;
-      if (valorUnit && qtd) inpVlr.value = (valorUnit*qtd).toFixed(2);
-      atualizarTotalMedicao();
+      const vunit = parseFloat(opt && opt.dataset ? opt.dataset.valor : 0)||0;
+      const q = parseFloat(inpQtd.value)||0;
+      if (vunit && q) inpVlr.value = (vunit*q).toFixed(2);
+      calcTotal();
     };
-    selSvc.addEventListener('change', calcItem);
-    inpQtd.addEventListener('input', calcItem);
-    inpVlr.addEventListener('input', atualizarTotalMedicao);
-
-    const btnRem = btn({style:'background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:0;'}, [icon('x')]);
-    btnRem.addEventListener('click', () => { itemDiv.remove(); atualizarTotalMedicao(); });
-
-    itemDiv.appendChild(selSvc);
-    itemDiv.appendChild(inpQtd);
-    itemDiv.appendChild(inpVlr);
-    itemDiv.appendChild(btnRem);
-    itensWrap.appendChild(itemDiv);
+    selSvc.addEventListener('change', calc);
+    inpQtd.addEventListener('input', calc);
+    inpVlr.addEventListener('input', calcTotal);
+    const btnX = btn({style:'background:none;border:none;cursor:pointer;color:var(--danger);font-size:18px;padding:0;'},[icon('x')]);
+    btnX.addEventListener('click', () => { row.remove(); calcTotal(); });
+    row.appendChild(selSvc); row.appendChild(inpQtd); row.appendChild(inpVlr); row.appendChild(btnX);
+    itensWrap.appendChild(row);
+    if (svcId && qtd) calcTotal();
   }
 
-  adicionarItemMedicao();
+  function calcTotal() {
+    let total = 0;
+    itensWrap.querySelectorAll('div:not(:first-child)').forEach(row => {
+      const inputs = row.querySelectorAll('input[type=number]');
+      if (inputs.length >= 2) total += parseFloat(inputs[1].value)||0;
+    });
+    const el2 = document.getElementById('medTotal');
+    if (el2) el2.textContent = 'R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  }
 
-  const btnAdd = btn({class:'btn btn-sm', style:'margin-bottom:1rem;'}, [icon('plus')]);
-  btnAdd.appendChild(document.createTextNode(' Adicionar serviço'));
-  btnAdd.addEventListener('click', () => adicionarItemMedicao());
-  body.appendChild(btnAdd);
+  // Carregar itens existentes ou vazio
+  if (medicaoExistente) {
+    const { data: itensMed } = await sbClient.from('prestador_medicoes')
+      .select('*').eq('prestador_id', prestadorId).eq('mes_referencia', medicaoExistente.mes_referencia);
+    (itensMed||[]).forEach(m => addItem(m.servico_id, m.quantidade, m.valor_total));
+    if (!itensMed || !itensMed.length) addItem();
+  } else {
+    addItem();
+  }
+
+  const btnAddSvc = btn({class:'btn btn-sm',style:'width:100%;justify-content:center;margin-bottom:1rem;'},[icon('plus')]);
+  btnAddSvc.appendChild(document.createTextNode(' Adicionar serviço'));
+  btnAddSvc.addEventListener('click', () => addItem());
+  body.appendChild(btnAddSvc);
 
   // Total
-  const totalRow = div({style:'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius);margin-bottom:1rem;'});
-  totalRow.appendChild(div({style:'font-size:13px;font-family:Arial,sans-serif;color:var(--text-muted);',text:'Total da medição:'}));
-  const totalEl = div({id:'medTotal',style:'font-size:20px;font-weight:500;color:var(--gold);font-family:Arial,sans-serif;',text:'R$ 0,00'});
-  totalRow.appendChild(totalEl);
-  body.appendChild(totalRow);
+  const totalBox = div({style:'display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--surface2);border-radius:var(--radius);margin-bottom:1rem;border:0.5px solid var(--border);'});
+  totalBox.appendChild(div({style:'font-size:13px;color:var(--text-muted);font-family:Arial,sans-serif;',text:'Total da medição:'}));
+  const totalEl = div({id:'medTotal',style:'font-size:22px;font-weight:600;color:var(--gold);font-family:Arial,sans-serif;',text:'R$ 0,00'});
+  totalBox.appendChild(totalEl);
+  body.appendChild(totalBox);
 
   // Observação
   const grObs = div({class:'form-group'});
   grObs.appendChild(el('label',{class:'form-label',text:'Observação'}));
-  grObs.appendChild(el('input',{type:'text',class:'form-input',id:'medObs',placeholder:'Opcional'}));
+  const inpObs = el('input',{type:'text',class:'form-input',id:'medObs',placeholder:'Opcional'});
+  if (medicaoExistente && medicaoExistente.observacao) inpObs.value = medicaoExistente.observacao;
+  grObs.appendChild(inpObs);
   body.appendChild(grObs);
 
-  // Abrir modal de medição por cima (sem fechar detalhe do prestador)
-  const overlay = document.getElementById('modalMedicao');
-  if (overlay) { overlay.style.display = 'flex'; overlay.style.zIndex = '1100'; }
-
-  // Atualizar footer com botão de recibo
+  // Footer
   const footer = document.querySelector('#modalMedicao .modal-footer');
   footer.innerHTML = '';
+
   const btnCancel = btn({class:'btn',text:'Cancelar'});
-  btnCancel.addEventListener('click', () => closeModal('modalMedicao'));
-  const btnSalvar = btn({class:'btn btn-primary',text:'Salvar medição'});
-  btnSalvar.addEventListener('click', () => salvarMedicaoCompleta(prestadorId, prestadorNome));
+  btnCancel.addEventListener('click', () => closeModalMedicao());
   footer.appendChild(btnCancel);
+
+  const btnSalvar = btn({class:'btn btn-primary'},[icon('device-floppy')]);
+  btnSalvar.appendChild(document.createTextNode(' Salvar'));
+  btnSalvar.addEventListener('click', () => salvarMedicaoCompleta(prestadorId, prestadorNome, medicaoExistente, itensWrap));
   footer.appendChild(btnSalvar);
-}
 
-function atualizarTotalMedicao() {
-  const itens = document.querySelectorAll('#medItensWrap > div');
-  let total = 0;
-  itens.forEach(item => {
-    const inputs = item.querySelectorAll('input[type=number]');
-    if (inputs.length >= 2) total += parseFloat(inputs[1].value)||0;
+  const btnRec = btn({class:'btn',style:'background:var(--surface2);border-color:var(--border);'},[icon('receipt')]);
+  btnRec.appendChild(document.createTextNode(' Recibo'));
+  btnRec.addEventListener('click', async () => {
+    const total = parseFloat((document.getElementById('medTotal')?.textContent||'0').replace('R$','').trim().replace(/\./g,'').replace(',','.'));
+    if (!total) { showToast('Calcule os itens antes.','err'); return; }
+    const mes = document.getElementById('medMes').value;
+    const obs = document.getElementById('medObs').value;
+    const itens = [];
+    itensWrap.querySelectorAll('div:not(:first-child)').forEach(row => {
+      const sel = row.querySelector('select');
+      const inputs = row.querySelectorAll('input[type=number]');
+      if (sel && sel.value && inputs.length >= 2) {
+        itens.push({servico_id: sel.value, quantidade: parseFloat(inputs[0].value)||0, valor: parseFloat(inputs[1].value)||0});
+      }
+    });
+    await gerarRecibo(prestadorId, prestadorNome, mes, total, itens, obs);
   });
-  const el = document.getElementById('medTotal');
-  if (el) el.textContent = 'R$ ' + total.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  footer.appendChild(btnRec);
+
+  // Abrir
+  const overlay = document.getElementById('modalMedicao');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    overlay.style.zIndex = '1100';
+    overlay.onclick = (e) => { if (e.target === overlay) closeModalMedicao(); };
+  }
+  calcTotal();
 }
 
-async function salvarMedicaoCompleta(prestadorId, prestadorNome) {
+async function salvarMedicaoCompleta(prestadorId, prestadorNome, medicaoExistente, itensWrap) {
   const mes = document.getElementById('medMes').value;
   const status = document.getElementById('medStatus').value;
   const obs = document.getElementById('medObs').value;
   if (!mes) { showToast('Informe o mês.','err'); return; }
 
-  const itens = document.querySelectorAll('#medItensWrap > div');
-  let total = 0;
+  const wrap = itensWrap || document.getElementById('medItensWrap');
   const servicos = [];
-  itens.forEach(item => {
-    const sel = item.querySelector('select');
-    const inputs = item.querySelectorAll('input[type=number]');
-    if (sel?.value && inputs.length >= 2) {
-      const qtd = parseFloat(inputs[0].value)||0;
-      const vlr = parseFloat(inputs[1].value)||0;
-      total += vlr;
-      servicos.push({servico_id: sel.value, quantidade: qtd, valor: vlr});
+  wrap.querySelectorAll('div:not(:first-child)').forEach(row => {
+    const sel = row.querySelector('select');
+    const inputs = row.querySelectorAll('input[type=number]');
+    if (sel && sel.value && inputs.length >= 2) {
+      servicos.push({servico_id: sel.value, quantidade: parseFloat(inputs[0].value)||0, valor_total: parseFloat(inputs[1].value)||0});
     }
   });
-
   if (!servicos.length) { showToast('Adicione pelo menos um serviço.','err'); return; }
+  const total = servicos.reduce((s,x) => s+x.valor_total, 0);
 
-  // Salvar uma medição por serviço
+  // Se editando, deletar registros antigos
+  if (medicaoExistente) {
+    await sbClient.from('prestador_medicoes').delete()
+      .eq('prestador_id', prestadorId).eq('mes_referencia', mes);
+  }
+
   for (const s of servicos) {
     await sbClient.from('prestador_medicoes').insert({
       prestador_id: prestadorId, servico_id: s.servico_id,
       mes_referencia: mes, quantidade: s.quantidade,
-      valor_total: s.valor, status, observacao: obs
+      valor_total: s.valor_total, status, observacao: obs
     });
   }
-  await logAudit('prestador_medicoes','INSERT',prestadorId,null,{mes,total,servicos:servicos.length});
-  closeModal('modalMedicao');
+
+  closeModalMedicao();
   showToast('Medição salva! Total: R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
 
-  // Oferecer geração de recibo
-  if (confirm('Medição salva! Deseja gerar o recibo agora?')) {
-    gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs);
+  if (confirm('Deseja gerar o recibo agora?')) {
+    await gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs);
   }
   loadPrestadores();
 }
 
-async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs) {
-  // Buscar dados do prestador
-  const prest = _todosPrests?.find(p=>p.id===prestadorId) || {nome:prestadorNome,especialidade:'',cpf_cnpj:''};
-
-  // Buscar serviços para descrição
-  const { data: svcData } = await sbClient.from('prestador_servicos').select('*').eq('prestador_id',prestadorId);
-  const svcMap = {};
-  (svcData||[]).forEach(s => svcMap[s.id] = s);
-
-  // Buscar dados do Cartão CNPJ no banco de documentos
-  let pagadorNome = 'STT Construtora e Incorporadora';
-  let pagadorEndereco = 'Av. Nereu Ramos, 1271 · Chapecó, SC';
-  let pagadorCnpj = '';
-  try {
-    const { data: docCnpj } = await sbClient.from('documentos').select('arquivo_url,nome')
-      .ilike('nome','%CNPJ%').limit(1).single();
-    if (docCnpj?.arquivo_url) {
-      const claudeKey = localStorage.getItem('claude_key')||'';
-      if (claudeKey) {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method:'POST',
-          headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-          body: JSON.stringify({
-            model:'claude-sonnet-4-5', max_tokens:400,
-            system:'Extraia dados do cartão CNPJ. Responda SOMENTE com JSON: {"razao_social":"","cnpj":"","endereco":"","municipio":"","uf":""}. Sem texto adicional.',
-            messages:[{role:'user',content:[
-              {type:'document',source:{type:'url',url:docCnpj.arquivo_url}},
-              {type:'text',text:'Extraia razão social, CNPJ, endereço completo, município e UF deste cartão CNPJ.'}
-            ]}]
-          })
-        });
-        const data = await res.json();
-        const text = (data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
-        const cnpjData = JSON.parse(text);
-        if (cnpjData.razao_social) pagadorNome = cnpjData.razao_social;
-        if (cnpjData.cnpj) pagadorCnpj = cnpjData.cnpj;
-        if (cnpjData.endereco) pagadorEndereco = cnpjData.endereco + (cnpjData.municipio ? ' · ' + cnpjData.municipio : '') + (cnpjData.uf ? '/' + cnpjData.uf : '');
-      }
-    }
-  } catch(e) { console.log('CNPJ não encontrado, usando dados padrão'); }
-
-  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-  const mesLabel = mes ? new Date(mes+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) : '';
-
-  const itensHtml = servicos.map(s => {
-    const svc = svcMap[s.servico_id] || {};
-    return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+
-      (svc.descricao||'Serviço')+'</td>'+
-      '<td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">'+
-      s.quantidade+' '+(svc.unidade||'un')+'</td>'+
-      '<td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">'+
-      'R$ '+parseFloat(s.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td></tr>';
-  }).join('');
-
-  const w = window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Recibo</title>
-<style>
-  body{font-family:Arial,sans-serif;font-size:13px;color:#222;max-width:680px;margin:2rem auto;padding:2rem;}
-  .header{text-align:center;border-bottom:2px solid #C9A84C;padding-bottom:1rem;margin-bottom:2rem;}
-  .logo{font-size:22px;font-weight:700;letter-spacing:0.1em;color:#C9A84C;text-transform:uppercase;}
-  .titulo{font-size:18px;font-weight:600;margin:1.5rem 0 0.5rem;}
-  .bloco{background:#f9f9f9;border-radius:8px;padding:1rem 1.25rem;margin-bottom:1rem;}
-  .label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;}
-  .valor{font-size:13px;color:#222;}
-  table{width:100%;border-collapse:collapse;margin-bottom:1rem;}
-  th{background:#1A1A1A;color:#C9A84C;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;}
-  .total-row{background:#f0f0f0;font-weight:700;}
-  .total-row td{padding:10px 12px;font-size:15px;}
-  .assinatura{margin-top:3rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
-  .assin-box{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#666;}
-  .footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #eee;font-size:10px;color:#aaa;text-align:center;}
-  @media print{body{margin:0;padding:1rem;} .no-print{display:none;}}
-</style></head><body>
-<div class="header">
-  <div class="logo">Mônaco Residence</div>
-  <div style="font-size:11px;color:#888;margin-top:4px;">Av. Nereu Ramos, 1271 · Chapecó, SC · STT Construtora e Incorporadora</div>
-</div>
-
-<div class="titulo">Recibo de Pagamento</div>
-<div style="font-size:12px;color:#888;margin-bottom:1.5rem;">Referência: ${mesLabel} · Emitido em ${hoje}</div>
-
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-  <div class="bloco">
-    <div class="label">Pagador</div>
-    <div class="valor" style="font-weight:600;">${pagadorNome}</div>
-    <div class="valor">${pagadorEndereco}</div>
-    ${pagadorCnpj ? '<div class="valor">CNPJ: '+pagadorCnpj+'</div>' : ''}
-  </div>
-  <div class="bloco">
-    <div class="label">Recebedor</div>
-    <div class="valor" style="font-weight:600;">${prest.nome}</div>
-    <div class="valor">${prest.especialidade||''}</div>
-    <div class="valor">${prest.cpf_cnpj||''}</div>
-  </div>
-</div>
-
-<table>
-  <thead><tr><th>Descrição</th><th style="text-align:center;">Quantidade</th><th style="text-align:right;">Valor</th></tr></thead>
-  <tbody>${itensHtml}
-    <tr class="total-row">
-      <td colspan="2">TOTAL</td>
-      <td style="text-align:right;">R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-    </tr>
-  </tbody>
-</table>
-
-${obs?'<div style="font-size:12px;color:#666;margin-bottom:1.5rem;"><strong>Observação:</strong> '+obs+'</div>':''}
-
-<div style="font-size:13px;margin-bottom:2rem;padding:1rem;background:#f9f9f9;border-radius:8px;">
-  Declaro ter recebido de <strong>${pagadorNome}</strong> a importância de 
-  <strong>R$ ${total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong> 
-  referente aos serviços prestados no mês de <strong>${mesLabel}</strong>, 
-  conforme discriminado acima.
-</div>
-
-<div class="assinatura">
-  <div class="assin-box">${pagadorNome}<br>Pagador</div>
-  <div class="assin-box">${prest.nome}<br>Recebedor</div>
-</div>
-
-<div class="footer">Mônaco Residence · STT Construtora e Incorporadora · Chapecó, SC</div>
-
-<div class="no-print" style="margin-top:2rem;text-align:center;">
-  <button onclick="window.print()" style="padding:10px 28px;background:#C9A84C;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Imprimir / Salvar PDF</button>
-</div>
-</body></html>`);
-  w.document.close();
+async function editarMedicao(prestadorId, prestadorNome, mesRef, status) {
+  const { data: meds } = await sbClient.from('prestador_medicoes')
+    .select('*').eq('prestador_id', prestadorId).eq('mes_referencia', mesRef).limit(1);
+  const base = meds?.[0] || {};
+  abrirModalMedicaoCompleta(prestadorId, prestadorNome, {mes_referencia: mesRef, status: base.status||status, observacao: base.observacao||''});
 }
 
-// ============================================================
-// CUB/SC
-// ============================================================
-let _cubAtual = parseFloat(localStorage.getItem('cub_valor')||0);
-let _cubData = localStorage.getItem('cub_data')||'';
 
-function atualizarExibicaoCUB() {
-  const el = document.getElementById('cubValor');
-  const dt = document.getElementById('cubData');
-  if (el) el.textContent = _cubAtual ? 'R$ '+_cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
-  if (dt) dt.textContent = _cubData ? 'Ref: '+_cubData : 'Não carregado';
-}
-
-async function buscarCUB() {
-  const el = document.getElementById('cubValor');
-  const dt = document.getElementById('cubData');
-  if (el) el.textContent = 'Buscando...';
-  try {
-    // Tentar buscar via proxy (CORS pode bloquear diretamente)
-    const res = await fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://sinduscon-fpolis.org.br/cub/'));
-    const data = await res.json();
-    const html = data.contents || '';
-    // Extrair valor CUB do HTML
-    const numeros = (html.match(/\d{1,3}[.,]\d{3}[.,]\d{2}/g)||[]);
-    const match = numeros.length ? [null, numeros[0]] : null;
-    if (match) {
-      const valor = parseFloat(match[1].replace('.','').replace(',','.'));
-      if (valor > 0) {
-        _cubAtual = valor;
-        _cubData = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-        localStorage.setItem('cub_valor', valor);
-        localStorage.setItem('cub_data', _cubData);
-        atualizarExibicaoCUB();
-        showToast('CUB atualizado: R$ '+valor.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
-        return;
-      }
-    }
-    showToast('Não foi possível extrair o CUB automaticamente. Use a edição manual.','err');
-    atualizarExibicaoCUB();
-  } catch(e) {
-    showToast('Erro ao buscar CUB. Informe manualmente.','err');
-    atualizarExibicaoCUB();
-  }
-}
-
-function editarCUB() {
-  const atual = _cubAtual ? _cubAtual.toFixed(2).replace('.',',') : '';
-  const novo = prompt('Digite o valor atual do CUB/SC (ex: 3.121,62 ou 3121.62):', atual);
-  if (novo !== null) {
-    // Aceitar formato BR (3.121,62) ou US (3121.62)
-    const limpo = novo.trim().replace(/\./g,'').replace(',','.');
-    const valor = parseFloat(limpo);
-    if (valor > 0) {
-      _cubAtual = valor;
-      _cubData = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-      localStorage.setItem('cub_valor', String(valor));
-      localStorage.setItem('cub_data', _cubData);
-      atualizarExibicaoCUB();
-      showToast('CUB atualizado: R$ '+valor.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
-    } else {
-      showToast('Valor inválido.','err');
-    }
-  }
-}
-
-function toggleCUBCliente() {
-  const usa = document.getElementById('clienteUsaCUB')?.checked;
-  const campos = document.getElementById('cubCampos');
-  const preview = document.getElementById('cubPreviewModal');
-  if (campos) campos.style.display = usa ? 'block' : 'none';
-  const cubLido = parseFloat((localStorage.getItem('cub_valor')||'0').replace(',','.'));
-  if (preview) preview.textContent = usa && cubLido ? 'CUB atual: R$ '+cubLido.toLocaleString('pt-BR',{minimumFractionDigits:2}) : (usa ? '⚠ Digite o CUB primeiro (botão lápis)' : '');
-}
-
-// ============================================================
-// PRESTADORES — EDITAR E EXCLUIR
-// ============================================================
-async function editarPrestador(id) {
-  const p = _todosPrests?.find(x=>x.id===id);
-  if (!p) return;
-  document.getElementById('prestNome').value = p.nome||'';
-  document.getElementById('prestCpf').value = p.cpf_cnpj||'';
-  document.getElementById('prestEspec').value = p.especialidade||'';
-  document.getElementById('prestTel').value = p.telefone||'';
-  document.getElementById('prestEmail').value = p.email||'';
-  document.getElementById('prestStatus').value = p.status||'ativo';
-  // Mudar botão salvar
-  const footer = document.querySelector('#modalPrestador .modal-footer');
-  const btnSalvar = footer.querySelector('.btn-primary');
-  if (btnSalvar) {
-    btnSalvar.textContent = 'Salvar alterações';
-    btnSalvar.onclick = () => atualizarPrestador(id);
-  }
-  document.querySelector('#modalPrestador .modal-title').textContent = 'Editar prestador';
-  openModal('modalPrestador');
-}
-
-async function atualizarPrestador(id) {
-  const payload = {
-    nome: document.getElementById('prestNome').value.trim(),
-    cpf_cnpj: document.getElementById('prestCpf').value,
-    especialidade: document.getElementById('prestEspec').value,
-    telefone: document.getElementById('prestTel').value,
-    email: document.getElementById('prestEmail').value,
-    status: document.getElementById('prestStatus').value
-  };
-  if (!payload.nome) { showToast('Informe o nome.','err'); return; }
-  await sbClient.from('prestadores').update(payload).eq('id',id);
-  // Resetar modal
-  const btnSalvar = document.querySelector('#modalPrestador .modal-footer .btn-primary');
-  if (btnSalvar) { btnSalvar.textContent = 'Salvar'; btnSalvar.onclick = () => salvarPrestador(); }
-  document.querySelector('#modalPrestador .modal-title').textContent = 'Novo prestador de serviços';
-  closeModal('modalPrestador');
-  showToast('Prestador atualizado!','ok');
-  loadPrestadores();
-}
-
-async function excluirPrestador(id, nome) {
-  if (!confirm('Excluir o prestador '+nome+'? Isso vai remover também todos os serviços e medições.')) return;
-  await sbClient.from('prestadores').delete().eq('id',id);
-  showToast('Prestador removido.','ok');
-  loadPrestadores();
-}
-
-// ============================================================
-// REINDEXAR PARCELAS PELO CUB ATUAL
-// ============================================================
-async function reindexarParcelas() {
-  const cubRaw = localStorage.getItem('cub_valor')||'0';
-  const cubAtual = parseFloat(cubRaw.indexOf(',') >= 0
-    ? cubRaw.replace(/[.]/g,'').replace(',','.')
-    : cubRaw) || 0;
-
-  if (!cubAtual) {
-    showToast('Digite o CUB atual antes de reindexar.','err');
-    return;
-  }
-
-  if (!confirm('Reindexar parcelas pelo CUB: R$ ' + cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '?')) return;
-
-  showToast('Reindexando...','ok');
-
-  // Buscar todos os contratos indexados em CUB
-  const { data: financeiros } = await sbClient
-    .from('financeiro_unidade')
-    .select('*, clientes(id, nome)')
-    .eq('indexado_cub', true);
-
-  if (!financeiros || !financeiros.length) {
-    showToast('Nenhum contrato indexado em CUB encontrado.','err');
-    return;
-  }
-
-  let totalAtualizados = 0;
-  for (const fin of financeiros) {
-    if (!fin.valor_venda_cub || !fin.unidade_id) continue;
-
-    // Recalcular com novo CUB
-    const cubBase = fin.cub_base || 1;
-    const valorVendaCUB = parseFloat(fin.valor_venda_cub);
-    const entradaCUB = fin.entrada && fin.cub_base ? parseFloat(fin.entrada) / cubBase : 0;
-
-    const novoValorVendaRS = valorVendaCUB * cubAtual;
-    const novaEntradaRS = entradaCUB * cubAtual;
-    const novoSaldo = novoValorVendaRS - novaEntradaRS;
-    const novaParcelaRS = parseFloat((novoSaldo / fin.num_parcelas).toFixed(2));
-
-    // Atualizar financeiro_unidade
-    await sbClient.from('financeiro_unidade').update({
-      valor_venda: novoValorVendaRS,
-      entrada: novaEntradaRS,
-      saldo_devedor: novoSaldo,
-      cub_base: cubAtual
-    }).eq('id', fin.id);
-
-    // Atualizar apenas parcelas pendentes (não alterar as já pagas)
-    await sbClient.from('parcelas')
-      .update({ valor: novaParcelaRS })
-      .eq('unidade_id', fin.unidade_id)
-      .in('status', ['pendente', 'atrasado']);
-
-    totalAtualizados++;
-    console.log('Reindexado:', fin.clientes?.nome, '| Nova parcela: R$', novaParcelaRS);
-  }
-
-  showToast(totalAtualizados + ' contrato(s) reindexados pelo CUB R$ ' +
-    cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '!', 'ok');
-  loadClientes();
-}
-
-// LOGIN com Enter
-document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-
-// INIT
-boot();
-</script>
-</body>
-</html>
