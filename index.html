@@ -389,6 +389,7 @@ textarea.form-input{min-height:80px;resize:vertical;}
             </div>
             <div style="display:flex;flex-direction:column;gap:4px;">
               <button class="btn btn-sm" onclick="editarCUB()" style="font-size:11px;padding:4px 8px;" title="Editar CUB manualmente"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+              <button class="btn btn-sm" onclick="reindexarParcelas()" style="font-size:11px;padding:4px 8px;background:rgba(201,168,76,0.15);border-color:var(--gold);color:var(--gold);" title="Reindexar parcelas abertas pelo CUB atual"><i class="ti ti-refresh" aria-hidden="true"></i></button>
             </div>
           </div>
         </div>
@@ -1544,7 +1545,10 @@ async function salvarCliente() {
   const primVenc = document.getElementById('clientePrimVenc').value;
   const usaCUB = document.getElementById('clienteUsaCUB')?.checked;
   const cubRaw = localStorage.getItem('cub_valor')||'0';
-  const cubAtual = parseFloat(cubRaw.replace(',','.')) || 0;
+  // Converter formato BR (3.121,62) ou US (3121.62) para número
+  const cubAtual = parseFloat(cubRaw.indexOf(',') >= 0
+    ? cubRaw.replace(/\./g,'').replace(',','.')
+    : cubRaw) || 0;
   console.log('CUB lido:', cubRaw, '->', cubAtual, '| usaCUB:', usaCUB);
 
   if (valorVenda > 0 && numParcelas > 0 && primVenc) {
@@ -1625,12 +1629,55 @@ async function atualizarCliente(id) {
   const { error } = await sbClient.from('clientes').update(payload).eq('id', id);
   if (error) { showToast('Erro: '+error.message,'err'); return; }
   await logAudit('clientes','UPDATE',id,null,payload);
-  // Resetar modal
+
+  // Buscar unidade_id do cliente
+  const { data: cli } = await sbClient.from('clientes').select('unidade_id').eq('id',id).single();
+  const unidadeId = cli?.unidade_id;
+
+  // Recalcular parcelas se dados financeiros foram informados
+  const valorVenda = parseFloat(document.getElementById('clienteValorVenda').value)||0;
+  const entrada = parseFloat(document.getElementById('clienteEntrada').value)||0;
+  const numParcelas = parseInt(document.getElementById('clienteNumParcelas').value)||0;
+  const primVenc = document.getElementById('clientePrimVenc').value;
+  const usaCUB = document.getElementById('clienteUsaCUB')?.checked;
+  const cubRaw = localStorage.getItem('cub_valor')||'0';
+  const cubAtual = parseFloat(cubRaw.replace(',','.').replace(/\./g, (m,o,s) => s.indexOf(',') > o ? '' : '.')) || 0;
+  console.log('Atualizar - CUB:', cubAtual, 'usaCUB:', usaCUB, 'valor:', valorVenda);
+
+  if (unidadeId && valorVenda > 0 && numParcelas > 0 && primVenc) {
+    const fator = (usaCUB && cubAtual > 0) ? cubAtual : 1;
+    const valorVendaRS = valorVenda * fator;
+    const entradaRS = entrada * fator;
+    const saldo = valorVendaRS - entradaRS;
+    const vlrParcela = parseFloat((saldo / numParcelas).toFixed(2));
+    console.log('Parcela calculada:', vlrParcela, 'fator:', fator);
+
+    await sbClient.from('financeiro_unidade').upsert({
+      unidade_id: unidadeId, valor_venda: valorVendaRS, entrada: entradaRS,
+      num_parcelas: numParcelas, saldo_devedor: saldo,
+      indexado_cub: usaCUB || false,
+      valor_venda_cub: usaCUB ? valorVenda : null,
+      cub_base: usaCUB ? cubAtual : null
+    }, {onConflict: 'unidade_id'});
+
+    await sbClient.from('parcelas').delete().eq('unidade_id', unidadeId);
+    const parcelas = [];
+    const base = new Date(primVenc + 'T12:00:00');
+    for (let i = 0; i < numParcelas; i++) {
+      const venc = new Date(base); venc.setMonth(venc.getMonth() + i);
+      const today = new Date(); today.setHours(0,0,0,0);
+      parcelas.push({ unidade_id: unidadeId, cliente_id: id, numero: i+1, valor: vlrParcela, vencimento: venc.toISOString().split('T')[0], status: venc < today ? 'atrasado' : 'pendente' });
+    }
+    await sbClient.from('parcelas').insert(parcelas);
+    showToast('Cliente e parcelas atualizados! R$ ' + vlrParcela.toLocaleString('pt-BR',{minimumFractionDigits:2}) + ' x ' + numParcelas, 'ok');
+  } else {
+    showToast('Cliente atualizado!', 'ok');
+  }
+
   document.getElementById('clienteUnidade').disabled = false;
   document.getElementById('btnSalvarCliente').textContent = 'Salvar cliente';
   document.getElementById('btnSalvarCliente').onclick = () => salvarCliente();
   closeModal('modalCliente');
-  showToast('Cliente atualizado!','ok');
   loadClientes();
 }
 
@@ -4271,6 +4318,75 @@ async function excluirPrestador(id, nome) {
   await sbClient.from('prestadores').delete().eq('id',id);
   showToast('Prestador removido.','ok');
   loadPrestadores();
+}
+
+// ============================================================
+// REINDEXAR PARCELAS PELO CUB ATUAL
+// ============================================================
+async function reindexarParcelas() {
+  const cubRaw = localStorage.getItem('cub_valor')||'0';
+  const cubAtual = parseFloat(cubRaw.indexOf(',') >= 0
+    ? cubRaw.replace(/[.]/g,'').replace(',','.')
+    : cubRaw) || 0;
+
+  if (!cubAtual) {
+    showToast('Digite o CUB atual antes de reindexar.','err');
+    return;
+  }
+
+  if (!confirm('Reindexar todas as parcelas abertas pelo CUB atual de R$ ' +
+    cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '?
+
+Isso vai recalcular o valor de todas as parcelas pendentes dos contratos indexados em CUB.')) return;
+
+  showToast('Reindexando...','ok');
+
+  // Buscar todos os contratos indexados em CUB
+  const { data: financeiros } = await sbClient
+    .from('financeiro_unidade')
+    .select('*, clientes(id, nome)')
+    .eq('indexado_cub', true);
+
+  if (!financeiros || !financeiros.length) {
+    showToast('Nenhum contrato indexado em CUB encontrado.','err');
+    return;
+  }
+
+  let totalAtualizados = 0;
+  for (const fin of financeiros) {
+    if (!fin.valor_venda_cub || !fin.unidade_id) continue;
+
+    // Recalcular com novo CUB
+    const cubBase = fin.cub_base || 1;
+    const valorVendaCUB = parseFloat(fin.valor_venda_cub);
+    const entradaCUB = fin.entrada && fin.cub_base ? parseFloat(fin.entrada) / cubBase : 0;
+
+    const novoValorVendaRS = valorVendaCUB * cubAtual;
+    const novaEntradaRS = entradaCUB * cubAtual;
+    const novoSaldo = novoValorVendaRS - novaEntradaRS;
+    const novaParcelaRS = parseFloat((novoSaldo / fin.num_parcelas).toFixed(2));
+
+    // Atualizar financeiro_unidade
+    await sbClient.from('financeiro_unidade').update({
+      valor_venda: novoValorVendaRS,
+      entrada: novaEntradaRS,
+      saldo_devedor: novoSaldo,
+      cub_base: cubAtual
+    }).eq('id', fin.id);
+
+    // Atualizar apenas parcelas pendentes (não alterar as já pagas)
+    await sbClient.from('parcelas')
+      .update({ valor: novaParcelaRS })
+      .eq('unidade_id', fin.unidade_id)
+      .in('status', ['pendente', 'atrasado']);
+
+    totalAtualizados++;
+    console.log('Reindexado:', fin.clientes?.nome, '| Nova parcela: R$', novaParcelaRS);
+  }
+
+  showToast(totalAtualizados + ' contrato(s) reindexados pelo CUB R$ ' +
+    cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '!', 'ok');
+  loadClientes();
 }
 
 // LOGIN com Enter
