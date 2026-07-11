@@ -324,14 +324,14 @@ textarea.form-input{min-height:80px;resize:vertical;}
         <div class="sidebar-label">Obra</div>
         <div class="nav-item" onclick="showPage('cronograma')"><i class="ti ti-timeline" aria-hidden="true"></i>Cronograma Global</div>
         <div class="nav-item" onclick="showPage('unidades')"><i class="ti ti-layout-grid" aria-hidden="true"></i>Cronograma Unidades</div>
-        <div class="nav-item" onclick="showPage('pendencias')"><i class="ti ti-alert-triangle" aria-hidden="true"></i>Cronograma Áreas Comuns</div>
+        <div class="nav-item" onclick="showPage('pendencias')"><i class="ti ti-swimming-pool" aria-hidden="true"></i>Cronograma Áreas Comuns</div>
         <div class="nav-item" onclick="showPage('etapas')"><i class="ti ti-list-check" aria-hidden="true"></i>Etapas Adm.</div>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Financeiro</div>
         <div class="nav-item" onclick="showPage('financeiro')"><i class="ti ti-cash" aria-hidden="true"></i>Contas<span class="nav-badge warn" id="badgeContas" style="display:none;">0</span></div>
         <div class="nav-item" onclick="showPage('fornecedores')"><i class="ti ti-users" aria-hidden="true"></i>Fornecedores</div>
-      <div class="nav-item" onclick="showPage('prestadores')"><i class="ti ti-hard-hat" aria-hidden="true"></i>Prestadores</div>
+      <div class="nav-item" onclick="showPage('prestadores')"><i class="ti ti-tools" aria-hidden="true"></i>Prestadores</div>
         <div class="nav-item" onclick="showPage('estoque')"><i class="ti ti-package" aria-hidden="true"></i>Estoque<span class="nav-badge" id="badgeEstoque" style="display:none;">0</span></div>
       </div>
       <div class="sidebar-section">
@@ -364,11 +364,11 @@ textarea.form-input{min-height:80px;resize:vertical;}
           <div class="module-card" onclick="showPage('clientes')"><div class="module-icon"><i class="ti ti-building" aria-hidden="true"></i></div><div class="module-name">Clientes</div><div class="module-desc">60 unidades, contratos e recebimentos</div></div>
           <div class="module-card" onclick="showPage('cronograma')"><div class="module-icon"><i class="ti ti-timeline" aria-hidden="true"></i></div><div class="module-name">Cronograma Global</div><div class="module-desc">20 etapas da obra, Gantt e % realizado</div></div>
           <div class="module-card" onclick="showPage('unidades')"><div class="module-icon"><i class="ti ti-layout-grid" aria-hidden="true"></i></div><div class="module-name">Cronograma Unidades</div><div class="module-desc">Progresso individual por apartamento</div></div>
-          <div class="module-card" onclick="showPage('pendencias')"><div class="module-icon"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div><div class="module-name">Cronograma Áreas Comuns</div><div class="module-desc">Progresso por área · Garagens, térreo e lazer</div></div>
+          <div class="module-card" onclick="showPage('pendencias')"><div class="module-icon"><i class="ti ti-swimming-pool" aria-hidden="true"></i></div><div class="module-name">Cronograma Áreas Comuns</div><div class="module-desc">Progresso por área · Garagens, térreo e lazer</div></div>
           <div class="module-card" onclick="showPage('etapas')"><div class="module-icon"><i class="ti ti-list-check" aria-hidden="true"></i></div><div class="module-name">Etapas Adm.</div><div class="module-desc">Legal, comercial, obra e entrega</div></div>
           <div class="module-card" onclick="showPage('financeiro')"><div class="module-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="module-name">Financeiro</div><div class="module-desc">Contas a pagar e a receber</div></div>
           <div class="module-card" onclick="showPage('fornecedores')"><div class="module-icon"><i class="ti ti-users" aria-hidden="true"></i></div><div class="module-name">Fornecedores</div><div class="module-desc">Contratos, orçamentos e certidões</div></div>
-          <div class="module-card" onclick="showPage('prestadores')"><div class="module-icon"><i class="ti ti-hard-hat" aria-hidden="true"></i></div><div class="module-name">Prestadores de Serviços</div><div class="module-desc">Tabela de serviços e medições mensais</div></div>
+          <div class="module-card" onclick="showPage('prestadores')"><div class="module-icon"><i class="ti ti-tools" aria-hidden="true"></i></div><div class="module-name">Prestadores de Serviços</div><div class="module-desc">Tabela de serviços e medições mensais</div></div>
           <div class="module-card" onclick="showPage('estoque')"><div class="module-icon"><i class="ti ti-package" aria-hidden="true"></i></div><div class="module-name">Compras e Estoque</div><div class="module-desc">Materiais, entradas e saídas</div></div>
           <div class="module-card" onclick="showPage('documentos')"><div class="module-icon"><i class="ti ti-folder" aria-hidden="true"></i></div><div class="module-name">Documentos</div><div class="module-desc">Alvarás, ARTs, projetos e contratos</div></div>
           <div class="module-card" onclick="showPage('reunioes')"><div class="module-icon"><i class="ti ti-message-2" aria-hidden="true"></i></div><div class="module-name">Reuniões</div><div class="module-desc">Atas, decisões e pendências</div></div>
@@ -380,6 +380,19 @@ textarea.form-input{min-height:80px;resize:vertical;}
       <div class="page" id="page-clientes">
         <div class="page-header"><div class="page-title"><span>Clientes</span> e Unidades</div><div class="page-subtitle">60 apartamentos · Andares 6 a 21 · 4 unidades por andar</div></div>
         <div class="gold-divider"></div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;">
+          <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:10px 16px;display:flex;align-items:center;gap:10px;">
+            <div>
+              <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;">CUB/SC</div>
+              <div style="font-size:18px;font-weight:600;color:var(--gold);font-family:Arial,sans-serif;" id="cubValor">—</div>
+              <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;" id="cubData">Carregando...</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+              <button class="btn btn-sm" onclick="buscarCUB()" style="font-size:11px;padding:4px 8px;"><i class="ti ti-refresh" aria-hidden="true"></i></button>
+              <button class="btn btn-sm" onclick="editarCUB()" style="font-size:11px;padding:4px 8px;"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+            </div>
+          </div>
+        </div>
         <div class="kpi-row" id="kpiClientes">
           <div class="kpi"><div class="kpi-label">Total unidades</div><div class="kpi-value" id="kpiTotal">60</div></div>
           <div class="kpi"><div class="kpi-label">Vendidas</div><div class="kpi-value green" id="kpiVendidas">—</div></div>
@@ -684,6 +697,16 @@ textarea.form-input{min-height:80px;resize:vertical;}
       <div class="form-row">
         <div class="form-group"><label class="form-label">Número de parcelas</label><input type="number" class="form-input" id="clienteNumParcelas" min="1" max="240" placeholder="48"></div>
         <div class="form-group"><label class="form-label">Vencimento 1ª parcela</label><input type="date" class="form-input" id="clientePrimVenc"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:0.25rem;">
+        <label style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="clienteUsaCUB" style="accent-color:var(--gold);" onchange="toggleCUBCliente()">
+          Indexar valores em CUB/SC
+        </label>
+        <span style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;" id="cubPreviewModal"></span>
+      </div>
+      <div id="cubCampos" style="display:none;margin-top:0.5rem;background:var(--surface2);border-radius:var(--radius);padding:0.75rem;font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;">
+        Os valores serão registrados em CUB/SC. O valor em reais será calculado automaticamente pelo CUB vigente na data de cada parcela.
       </div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('modalCliente')">Cancelar</button><button class="btn btn-primary" id="btnSalvarCliente" onclick="salvarCliente()">Salvar cliente</button></div>
@@ -1389,13 +1412,17 @@ async function loadAuditoria() {
 // CLIENTES
 // ============================================================
 async function loadClientes() {
-  const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',21).order('andar').order('posicao');
+  // Atualizar exibição do CUB
+  _cubAtual = parseFloat(localStorage.getItem('cub_valor')||0);
+  _cubData = localStorage.getItem('cub_data')||'';
+  atualizarExibicaoCUB();
+  const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',20).order('andar').order('posicao');
   if (!unidades) return;
   const total = unidades.length;
   const vendidas = unidades.filter(u=>u.status==='vendida').length;
   const reservadas = unidades.filter(u=>u.status==='reservada').length;
   const disponiveis = unidades.filter(u=>u.status==='disponivel').length;
-  if (document.getElementById('kpiTotal')) document.getElementById('kpiTotal').textContent = total;
+  if (document.getElementById('kpiTotal')) document.getElementById('kpiTotal').textContent = 60;
   document.getElementById('kpiVendidas').textContent = vendidas;
   document.getElementById('kpiDisponiveis').textContent = disponiveis;
   document.getElementById('kpiReservadas').textContent = reservadas;
@@ -1460,7 +1487,7 @@ function buildUnitGrid(unidades) {
   const map = {};
   unidades.forEach(u => map[u.numero] = u.status);
   // Ordem crescente: 6 em cima, 21 embaixo
-  for (let f = 6; f <= 21; f++) {
+  for (let f = 6; f <= 20; f++) {
     // Sem label lateral — só as células
     for (let u = 1; u <= 4; u++) {
       const num = (f*100)+u;
@@ -2293,8 +2320,8 @@ async function loadFinanceiro() {
   const aPagar = pending.reduce((s,c)=>s+parseFloat(c.valor||0),0);
   const aReceber = parcelas?.filter(p=>p.status==='pendente').reduce((s,p)=>s+parseFloat(p.valor||0),0)||0;
   const atrasadas = parcelas?.filter(p=>p.status==='atrasado').length||0;
-  document.getElementById('kpiAPagar').textContent = 'R$ '+aPagar.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
-  document.getElementById('kpiAReceber').textContent = 'R$ '+aReceber.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  document.getElementById('kpiAPagar').textContent = 'R$ '+aPagar.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('kpiAReceber').textContent = 'R$ '+aReceber.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('kpiAtrasadas').textContent = atrasadas;
   document.getElementById('kpiVencendo').textContent = vencendo;
 
@@ -3516,17 +3543,30 @@ async function loadPrestadores() {
   }
   const stCls = {ativo:'badge-ok',inativo:'badge-gray',aguardando:'badge-warn'};
   const stLbl = {ativo:'Ativo',inativo:'Inativo',aguardando:'Aguardando'};
-  wrap.innerHTML = prestadores.map(p => `
-    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;">
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 1.25rem;">
-        <div style="flex:1;">
-          <div style="font-size:15px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;">${p.nome}</div>
-          <div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;">${p.especialidade||'—'} · ${p.telefone||'—'}</div>
-        </div>
-        <span class="status-badge ${stCls[p.status]||'badge-gray'}">${stLbl[p.status]||p.status}</span>
-        <button class="btn btn-sm" onclick="abrirDetalhePrestador('${p.id}','${p.nome.replace(/'/g,"\'")}')">Ver detalhes</button>
-      </div>
-    </div>`).join('');
+  const prestWrap = document.getElementById('prestadoresWrap');
+  prestWrap.innerHTML = '';
+  prestadores.forEach(p => {
+    const card = div({style:'background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;'});
+    const inner = div({style:'display:flex;align-items:center;gap:12px;padding:14px 1.25rem;'});
+    const info = div({style:'flex:1;'});
+    info.appendChild(div({style:'font-size:15px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;', text:p.nome}));
+    info.appendChild(div({style:'font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;', text:(p.especialidade||'—')+' · '+(p.telefone||'—')}));
+    inner.appendChild(info);
+    const badge = span({class:'status-badge '+(stCls[p.status]||'badge-gray'), text:stLbl[p.status]||p.status});
+    inner.appendChild(badge);
+    const btnVer = btn({class:'btn btn-sm'}, [icon('eye')]);
+    btnVer.appendChild(document.createTextNode(' Detalhes'));
+    btnVer.addEventListener('click', () => abrirDetalhePrestador(p.id, p.nome));
+    inner.appendChild(btnVer);
+    const btnEdit = btn({class:'btn btn-sm'}, [icon('pencil')]);
+    btnEdit.addEventListener('click', () => editarPrestador(p.id));
+    inner.appendChild(btnEdit);
+    const btnDel = btn({class:'btn btn-danger btn-sm'}, [icon('trash')]);
+    btnDel.addEventListener('click', () => excluirPrestador(p.id, p.nome));
+    inner.appendChild(btnDel);
+    card.appendChild(inner);
+    prestWrap.appendChild(card);
+  });
 }
 
 async function salvarPrestador() {
@@ -3588,6 +3628,11 @@ async function abrirDetalhePrestador(prestadorId, nome) {
       </div>
     </div>`;
   openModal('modalUnidade');
+  // Adicionar evento ao botão de nova medição via JS (evitar problemas de aspas)
+  setTimeout(() => {
+    const btnMed = document.getElementById('btnNovaMedicaoPrest');
+    if (btnMed) btnMed.addEventListener('click', () => abrirModalMedicaoCompleta(prestadorId, nome));
+  }, 100);
 }
 
 async function salvarServicoPrestador() {
@@ -3871,7 +3916,9 @@ async function abrirModalMedicaoCompleta(prestadorId, prestadorNome) {
   grObs.appendChild(el('input',{type:'text',class:'form-input',id:'medObs',placeholder:'Opcional'}));
   body.appendChild(grObs);
 
-  openModal('modalMedicao');
+  // Abrir modal de medição por cima (sem fechar detalhe do prestador)
+  const overlay = document.getElementById('modalMedicao');
+  if (overlay) { overlay.style.display = 'flex'; overlay.style.zIndex = '1100'; }
 
   // Atualizar footer com botão de recibo
   const footer = document.querySelector('#modalMedicao .modal-footer');
@@ -4063,6 +4110,122 @@ ${obs?'<div style="font-size:12px;color:#666;margin-bottom:1.5rem;"><strong>Obse
 </div>
 </body></html>`);
   w.document.close();
+}
+
+// ============================================================
+// CUB/SC
+// ============================================================
+let _cubAtual = parseFloat(localStorage.getItem('cub_valor')||0);
+let _cubData = localStorage.getItem('cub_data')||'';
+
+function atualizarExibicaoCUB() {
+  const el = document.getElementById('cubValor');
+  const dt = document.getElementById('cubData');
+  if (el) el.textContent = _cubAtual ? 'R$ '+_cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  if (dt) dt.textContent = _cubData ? 'Ref: '+_cubData : 'Não carregado';
+}
+
+async function buscarCUB() {
+  const el = document.getElementById('cubValor');
+  const dt = document.getElementById('cubData');
+  if (el) el.textContent = 'Buscando...';
+  try {
+    // Tentar buscar via proxy (CORS pode bloquear diretamente)
+    const res = await fetch('https://api.allorigins.win/get?url='+encodeURIComponent('https://sinduscon-fpolis.org.br/cub/'));
+    const data = await res.json();
+    const html = data.contents || '';
+    // Extrair valor CUB do HTML
+    const match = html.match(/R\$\s*([\d.,]+)/);
+    if (match) {
+      const valor = parseFloat(match[1].replace('.','').replace(',','.'));
+      if (valor > 0) {
+        _cubAtual = valor;
+        _cubData = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+        localStorage.setItem('cub_valor', valor);
+        localStorage.setItem('cub_data', _cubData);
+        atualizarExibicaoCUB();
+        showToast('CUB atualizado: R$ '+valor.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
+        return;
+      }
+    }
+    showToast('Não foi possível extrair o CUB automaticamente. Use a edição manual.','err');
+    atualizarExibicaoCUB();
+  } catch(e) {
+    showToast('Erro ao buscar CUB. Informe manualmente.','err');
+    atualizarExibicaoCUB();
+  }
+}
+
+function editarCUB() {
+  const atual = _cubAtual || '';
+  const novo = prompt('Digite o valor atual do CUB/SC (R$):', atual);
+  if (novo !== null && parseFloat(novo.replace(',','.'))) {
+    _cubAtual = parseFloat(novo.replace(',','.'));
+    _cubData = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    localStorage.setItem('cub_valor', _cubAtual);
+    localStorage.setItem('cub_data', _cubData);
+    atualizarExibicaoCUB();
+    showToast('CUB atualizado!','ok');
+  }
+}
+
+function toggleCUBCliente() {
+  const usa = document.getElementById('clienteUsaCUB')?.checked;
+  const campos = document.getElementById('cubCampos');
+  const preview = document.getElementById('cubPreviewModal');
+  if (campos) campos.style.display = usa ? 'block' : 'none';
+  if (preview && _cubAtual) preview.textContent = usa ? 'CUB atual: R$ '+_cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '';
+}
+
+// ============================================================
+// PRESTADORES — EDITAR E EXCLUIR
+// ============================================================
+async function editarPrestador(id) {
+  const p = _todosPrests?.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('prestNome').value = p.nome||'';
+  document.getElementById('prestCpf').value = p.cpf_cnpj||'';
+  document.getElementById('prestEspec').value = p.especialidade||'';
+  document.getElementById('prestTel').value = p.telefone||'';
+  document.getElementById('prestEmail').value = p.email||'';
+  document.getElementById('prestStatus').value = p.status||'ativo';
+  // Mudar botão salvar
+  const footer = document.querySelector('#modalPrestador .modal-footer');
+  const btnSalvar = footer.querySelector('.btn-primary');
+  if (btnSalvar) {
+    btnSalvar.textContent = 'Salvar alterações';
+    btnSalvar.onclick = () => atualizarPrestador(id);
+  }
+  document.querySelector('#modalPrestador .modal-title').textContent = 'Editar prestador';
+  openModal('modalPrestador');
+}
+
+async function atualizarPrestador(id) {
+  const payload = {
+    nome: document.getElementById('prestNome').value.trim(),
+    cpf_cnpj: document.getElementById('prestCpf').value,
+    especialidade: document.getElementById('prestEspec').value,
+    telefone: document.getElementById('prestTel').value,
+    email: document.getElementById('prestEmail').value,
+    status: document.getElementById('prestStatus').value
+  };
+  if (!payload.nome) { showToast('Informe o nome.','err'); return; }
+  await sbClient.from('prestadores').update(payload).eq('id',id);
+  // Resetar modal
+  const btnSalvar = document.querySelector('#modalPrestador .modal-footer .btn-primary');
+  if (btnSalvar) { btnSalvar.textContent = 'Salvar'; btnSalvar.onclick = () => salvarPrestador(); }
+  document.querySelector('#modalPrestador .modal-title').textContent = 'Novo prestador de serviços';
+  closeModal('modalPrestador');
+  showToast('Prestador atualizado!','ok');
+  loadPrestadores();
+}
+
+async function excluirPrestador(id, nome) {
+  if (!confirm('Excluir o prestador '+nome+'?
+Isso vai remover também todos os serviços e medições.')) return;
+  await sbClient.from('prestadores').delete().eq('id',id);
+  showToast('Prestador removido.','ok');
+  loadPrestadores();
 }
 
 // LOGIN com Enter
