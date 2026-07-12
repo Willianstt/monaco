@@ -4059,4 +4059,56 @@ async function editarMedicao(prestadorId, prestadorNome, mesRef, status) {
   abrirModalMedicaoCompleta(prestadorId, prestadorNome, {mes_referencia: mesRef, status: base.status||status, observacao: base.observacao||''});
 }
 
+async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs) {
+  const prest = _todosPrests ? (_todosPrests.find(p=>p.id===prestadorId)||{nome:prestadorNome,especialidade:'',cpf_cnpj:''}) : {nome:prestadorNome,especialidade:'',cpf_cnpj:''};
+  const { data: svcData } = await sbClient.from('prestador_servicos').select('*').eq('prestador_id',prestadorId);
+  const svcMap = {};
+  (svcData||[]).forEach(s => { svcMap[s.id] = s; });
+
+  let pagadorNome = 'STT Construtora e Incorporadora';
+  let pagadorEndereco = 'Av. Nereu Ramos, 1271 - Chapecó, SC';
+  let pagadorCnpj = '';
+  try {
+    const { data: docCnpj } = await sbClient.from('documentos').select('arquivo_url').ilike('nome','%CNPJ%').limit(1).single();
+    if (docCnpj && docCnpj.arquivo_url) {
+      const claudeKey = localStorage.getItem('claude_key')||'';
+      if (claudeKey) {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          body: JSON.stringify({model:'claude-sonnet-4-5',max_tokens:300,system:'Extraia do cartão CNPJ apenas: {"razao_social":"","cnpj":"","endereco":"","municipio":"","uf":""}. Só JSON.',messages:[{role:'user',content:[{type:'document',source:{type:'url',url:docCnpj.arquivo_url}},{type:'text',text:'Extraia os dados.'}]}]})
+        });
+        const d = await res.json();
+        const t = ((d.content&&d.content[0]?d.content[0].text:'')||'{}').replace(/```json|```/g,'').trim();
+        try { const j=JSON.parse(t); if(j.razao_social)pagadorNome=j.razao_social; if(j.cnpj)pagadorCnpj=j.cnpj; if(j.endereco)pagadorEndereco=j.endereco+(j.municipio?' - '+j.municipio:'')+(j.uf?'/'+j.uf:''); } catch(e2){}
+      }
+    }
+  } catch(e) {}
+
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const mesLabel = mes ? new Date(mes+'-01T12:00:00').toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) : '';
+  const itensHtml = (servicos||[]).map(s => {
+    const svc = svcMap[s.servico_id]||{};
+    return '<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;">'+(svc.descricao||'Serviço')+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">'+(s.quantidade||0)+' '+(svc.unidade||'un')+'</td><td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">R$ '+parseFloat(s.valor||s.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td></tr>';
+  }).join('');
+
+  const w = window.open('','_blank');
+  if (!w) { showToast('Permita pop-ups para gerar o recibo.','err'); return; }
+  w.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Recibo - '+prest.nome+'</title><style>body{font-family:Arial,sans-serif;font-size:13px;color:#222;max-width:680px;margin:2rem auto;padding:2rem;}.header{text-align:center;border-bottom:2px solid #C9A84C;padding-bottom:1rem;margin-bottom:2rem;}.logo{font-size:22px;font-weight:700;letter-spacing:0.1em;color:#C9A84C;text-transform:uppercase;}.bloco{background:#f9f9f9;border-radius:8px;padding:1rem 1.25rem;margin-bottom:1rem;}.label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;}table{width:100%;border-collapse:collapse;margin-bottom:1rem;}th{background:#1A1A1A;color:#C9A84C;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;}.total-row td{padding:10px 12px;font-size:15px;font-weight:700;background:#f0f0f0;}.assinatura{margin-top:3rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;}.assin-box{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#666;}@media print{.no-print{display:none;}}</style></head><body>'+
+'<div class="header"><div class="logo">Monaco Residence</div><div style="font-size:11px;color:#888;margin-top:4px;">Av. Nereu Ramos, 1271 - Chapeco, SC - STT Construtora</div></div>'+
+'<h2 style="font-size:18px;font-weight:600;margin-bottom:4px;">Recibo de Pagamento</h2>'+
+'<div style="font-size:12px;color:#888;margin-bottom:1.5rem;">Ref: '+mesLabel+' - Emitido em '+hoje+'</div>'+
+'<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">'+
+'<div class="bloco"><div class="label">Pagador</div><div style="font-weight:600;">'+pagadorNome+'</div><div>'+pagadorEndereco+'</div>'+(pagadorCnpj?'<div>CNPJ: '+pagadorCnpj+'</div>':'')+'</div>'+
+'<div class="bloco"><div class="label">Recebedor</div><div style="font-weight:600;">'+prest.nome+'</div><div>'+(prest.especialidade||'')+'</div><div>'+(prest.cpf_cnpj||'')+'</div></div>'+
+'</div>'+
+'<table><thead><tr><th>Descricao</th><th style="text-align:center;">Quantidade</th><th style="text-align:right;">Valor</th></tr></thead><tbody>'+itensHtml+'<tr class="total-row"><td colspan="2">TOTAL</td><td style="text-align:right;">R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td></tr></tbody></table>'+
+(obs?'<div style="font-size:12px;color:#666;margin-bottom:1.5rem;"><strong>Observacao:</strong> '+obs+'</div>':'')+
+'<div style="font-size:13px;padding:1rem;background:#f9f9f9;border-radius:8px;margin-bottom:2rem;">Declaro ter recebido de <strong>'+pagadorNome+'</strong> a importancia de <strong>R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</strong> referente aos servicos prestados no mes de <strong>'+mesLabel+'</strong>.</div>'+
+'<div class="assinatura"><div class="assin-box">'+pagadorNome+'<br>Pagador</div><div class="assin-box">'+prest.nome+'<br>Recebedor</div></div>'+
+'<div class="no-print" style="margin-top:2rem;text-align:center;"><button onclick="window.print()" style="padding:10px 28px;background:#C9A84C;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Imprimir / Salvar PDF</button></div>'+
+'</body></html>');
+  w.document.close();
+}
+
 
