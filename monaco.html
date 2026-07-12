@@ -176,6 +176,7 @@ tr:hover td{background:var(--surface2);color:var(--text);}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;display:none;align-items:center;justify-content:center;padding:1rem;}
+#modalMedicao{z-index:500;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:0.5px solid var(--border-strong);border-radius:var(--radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:0.5px solid var(--border);}
@@ -3022,7 +3023,7 @@ document.getElementById('globalSearch').addEventListener('input', function() {
 // ============================================================
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target===m) m.classList.remove('open'); }); });
+document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target===m && m.id !== 'modalMedicao') m.classList.remove('open'); }); });
 
 // ============================================================
 // TOAST
@@ -4129,9 +4130,7 @@ async function abrirDetalhePrestador(prestadorId, nome) {
 
   const btnMed = document.getElementById('btnNovaMedicao');
   if (btnMed) btnMed.addEventListener('click', () => {
-    // Abrir medição por cima sem fechar o detalhe
-    const medModal = document.getElementById('modalMedicao');
-    if (medModal) { medModal.style.display = 'flex'; medModal.style.zIndex = '1100'; }
+    abrirModalMedicaoCompleta(prestadorId, nome);
   });
 }
 
