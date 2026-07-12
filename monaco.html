@@ -1858,7 +1858,9 @@ const DISCIPLINAS = [
 let _unidadesCache = [];
 let _cronoCache = [];
 let _pendenciasCache = [];
-let _disciplinaAberta = {}; // unidadeId+disc -> bool
+let _disciplinaAberta = {};
+let _todosPrests = [];
+let _todosForns = []; // unidadeId+disc -> bool
 
 async function loadCronogramaUnidades() {
   const andar = document.getElementById('filterAndar').value;
@@ -2393,8 +2395,6 @@ async function deletarConta(id) {
 // ============================================================
 // FORNECEDORES
 // ============================================================
-let _todosForns = [];
-
 async function loadFornecedores() {
   const { data } = await sbClient.from('fornecedores').select('*').order('categoria').order('nome');
   _todosForns = data || [];
@@ -3528,8 +3528,6 @@ async function verificarNotificacoes() {
 // ============================================================
 // PRESTADORES DE SERVIÇOS
 // ============================================================
-let _todosPrests = [];
-
 async function salvarPrestador() {
   const nome = document.getElementById('prestNome').value.trim();
   if (!nome) { showToast('Informe o nome.','err'); return; }
@@ -3541,9 +3539,7 @@ async function salvarPrestador() {
     email: document.getElementById('prestEmail').value,
     status: document.getElementById('prestStatus').value || 'ativo'
   };
-  console.log('Salvando prestador:', payload);
-  const { data: prestData, error } = await sbClient.from('prestadores').insert(payload).select().single();
-  console.log('Resultado prestador:', prestData, error);
+  const { error } = await sbClient.from('prestadores').insert(payload);
   if (error) { showToast('Erro: '+error.message,'err'); return; }
   closeModal('modalPrestador');
   showToast('Prestador salvo!','ok');
@@ -3551,8 +3547,7 @@ async function salvarPrestador() {
 }
 
 async function loadPrestadores() {
-  const { data: prestadores, error: errP } = await sbClient.from('prestadores').select('*').order('nome');
-  console.log('Prestadores:', prestadores, errP);
+  const { data: prestadores } = await sbClient.from('prestadores').select('*').order('nome');
   _todosPrests = prestadores || [];
   const wrap = document.getElementById('prestadoresWrap');
   if (!wrap) return;
@@ -3563,7 +3558,7 @@ async function loadPrestadores() {
   const stCls = {ativo:'badge-ok',inativo:'badge-gray',aguardando:'badge-warn'};
   const stLbl = {ativo:'Ativo',inativo:'Inativo',aguardando:'Aguardando'};
   wrap.innerHTML = '';
-  let _todosPrests = prestadores;
+  _todosPrests = prestadores || [];
   prestadores.forEach(p => {
     const card = document.createElement('div');
     card.style.cssText = 'background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;';
