@@ -1600,12 +1600,56 @@ async function atualizarCliente(id) {
   const { error } = await sbClient.from('clientes').update(payload).eq('id', id);
   if (error) { showToast('Erro: '+error.message,'err'); return; }
   await logAudit('clientes','UPDATE',id,null,payload);
-  // Resetar modal
+
+  // Buscar unidade_id
+  const { data: cli } = await sbClient.from('clientes').select('unidade_id').eq('id',id).single();
+  const unidadeId = cli?.unidade_id;
+
+  // Gerar/atualizar parcelas se dados financeiros informados
+  const valorVenda = parseFloat(document.getElementById('clienteValorVenda').value)||0;
+  const entrada = parseFloat(document.getElementById('clienteEntrada').value)||0;
+  const numParcelas = parseInt(document.getElementById('clienteNumParcelas').value)||0;
+  const primVenc = document.getElementById('clientePrimVenc').value;
+  const usaCUB = document.getElementById('clienteUsaCUB')?.checked || false;
+  const cubRaw = localStorage.getItem('cub_valor')||'0';
+  const cubAtual = parseFloat(cubRaw.indexOf(',')>=0 ? cubRaw.replace(/\./g,'').replace(',','.') : cubRaw) || 0;
+
+  if (unidadeId && valorVenda > 0 && numParcelas > 0 && primVenc) {
+    const fator = (usaCUB && cubAtual > 0) ? cubAtual : 1;
+    const saldo = (valorVenda - entrada) * fator;
+    const valorVendaRS = valorVenda * fator;
+    const entradaRS = entrada * fator;
+    const vlrParcela = parseFloat((saldo/numParcelas).toFixed(2));
+    console.log('Atualizando parcelas — CUB:', cubAtual, 'parcela:', vlrParcela);
+
+    // Salvar financeiro (deletar antigo e reinserir)
+    await sbClient.from('financeiro_unidade').delete().eq('unidade_id', unidadeId);
+    await sbClient.from('financeiro_unidade').insert({
+      unidade_id: unidadeId, valor_venda: valorVendaRS, entrada: entradaRS,
+      num_parcelas: numParcelas, saldo_devedor: saldo,
+      indexado_cub: usaCUB, valor_venda_cub: usaCUB?valorVenda:null, cub_base: usaCUB?cubAtual:null
+    });
+
+    // Deletar parcelas antigas e gerar novas
+    await sbClient.from('parcelas').delete().eq('unidade_id', unidadeId);
+    const parcelas = [];
+    const base = new Date(primVenc+'T12:00:00');
+    for (let i = 0; i < numParcelas; i++) {
+      const venc = new Date(base); venc.setMonth(venc.getMonth()+i);
+      const today = new Date(); today.setHours(0,0,0,0);
+      parcelas.push({ unidade_id: unidadeId, cliente_id: id, numero: i+1, valor: vlrParcela, vencimento: venc.toISOString().split('T')[0], status: venc < today ? 'atrasado' : 'pendente' });
+    }
+    const { error: pErr } = await sbClient.from('parcelas').insert(parcelas);
+    if (pErr) { console.error('Erro ao salvar parcelas:', pErr); showToast('Erro ao salvar parcelas: '+pErr.message,'err'); return; }
+    showToast(numParcelas+' parcelas geradas! R$ '+vlrParcela.toLocaleString('pt-BR',{minimumFractionDigits:2})+'/parcela', 'ok');
+  } else {
+    showToast('Cliente atualizado!','ok');
+  }
+
   document.getElementById('clienteUnidade').disabled = false;
   document.getElementById('btnSalvarCliente').textContent = 'Salvar cliente';
   document.getElementById('btnSalvarCliente').onclick = () => salvarCliente();
   closeModal('modalCliente');
-  showToast('Cliente atualizado!','ok');
   loadClientes();
 }
 
@@ -4086,6 +4130,7 @@ async function excluirPrestador(id, nome) {
 boot();
 
 async function abrirDetalhePrestador(prestadorId, nome) {
+  try {
   const [{ data: servicos }, { data: medicoes }] = await Promise.all([
     sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao'),
     sbClient.from('prestador_medicoes').select('*, prestador_servicos(descricao,unidade)').eq('prestador_id', prestadorId).order('mes_referencia',{ascending:false}).limit(20)
@@ -4172,6 +4217,10 @@ async function abrirDetalhePrestador(prestadorId, nome) {
   if (btnMed) btnMed.addEventListener('click', () => {
     abrirModalMedicaoCompleta(prestadorId, nome);
   });
+  } catch(err) {
+    console.error('Erro em abrirDetalhePrestador:', err);
+    showToast('Erro ao abrir detalhes: '+err.message, 'err');
+  }
 }
 
 
