@@ -3813,12 +3813,29 @@ async function salvarMedicaoCompleta(prestadorId, prestadorNome) {
   await logAudit('prestador_medicoes','INSERT',prestadorId,null,{mes,total,servicos:servicos.length});
   closeModal('modalMedicao');
   showToast('Medição salva! Total: R$ '+total.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
-
-  // Oferecer geração de recibo
-  if (confirm('Medição salva! Deseja gerar o recibo agora?')) {
-    gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs);
-  }
   loadPrestadores();
+
+  // Oferecer recibo com botão (sem confirm que bloqueia)
+  setTimeout(() => {
+    const toastEl = document.createElement('div');
+    toastEl.style.cssText = 'position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);background:var(--surface2);border:0.5px solid var(--gold);border-radius:var(--radius-lg);padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:9999;font-family:Arial,sans-serif;font-size:13px;color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+    toastEl.innerHTML = '<span>Deseja gerar o recibo?</span>';
+    const btnSim = document.createElement('button');
+    btnSim.className = 'btn btn-primary btn-sm';
+    btnSim.textContent = 'Gerar recibo';
+    btnSim.addEventListener('click', () => {
+      document.body.removeChild(toastEl);
+      gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs);
+    });
+    const btnNao = document.createElement('button');
+    btnNao.className = 'btn btn-sm';
+    btnNao.textContent = 'Agora não';
+    btnNao.addEventListener('click', () => document.body.removeChild(toastEl));
+    toastEl.appendChild(btnSim);
+    toastEl.appendChild(btnNao);
+    document.body.appendChild(toastEl);
+    setTimeout(() => { if (document.body.contains(toastEl)) document.body.removeChild(toastEl); }, 10000);
+  }, 500);
 }
 
 async function gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs) {
@@ -4122,6 +4139,9 @@ async function abrirDetalhePrestador(prestadorId, nome) {
   html += '</div></div>';
   body.innerHTML = html;
 
+  // Resetar estado do modal antes de abrir
+  const bodyEl = document.getElementById('modalUnidadeBody');
+  if (bodyEl) bodyEl.innerHTML = '<div style="padding:1rem;color:var(--text-dim);font-family:Arial,sans-serif;">Carregando...</div>';
   openModal('modalUnidade');
 
   // Adicionar eventos via JS
