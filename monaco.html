@@ -4029,9 +4029,8 @@ async function excluirPrestador(id, nome) {
 
 // INIT
 boot();
-</script>
-</body>
-</html>async function abrirDetalhePrestador(prestadorId, nome) {
+
+async function abrirDetalhePrestador(prestadorId, nome) {
   const [{ data: servicos }, { data: medicoes }] = await Promise.all([
     sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao'),
     sbClient.from('prestador_medicoes').select('*, prestador_servicos(descricao,unidade)').eq('prestador_id', prestadorId).order('mes_referencia',{ascending:false}).limit(20)
@@ -4110,3 +4109,6 @@ boot();
 }
 
 
+</script>
+</body>
+</html>
