@@ -324,7 +324,7 @@ textarea.form-input{min-height:80px;resize:vertical;}
         <div class="sidebar-label">Obra</div>
         <div class="nav-item" onclick="showPage('cronograma')"><i class="ti ti-timeline" aria-hidden="true"></i>Cronograma Global</div>
         <div class="nav-item" onclick="showPage('unidades')"><i class="ti ti-layout-grid" aria-hidden="true"></i>Cronograma Unidades</div>
-        <div class="nav-item" onclick="showPage('pendencias')"><i class="ti ti-swimming-pool" aria-hidden="true"></i>Cronograma Áreas Comuns</div>
+        <div class="nav-item" onclick="showPage('pendencias')"><i class="ti ti-beach" aria-hidden="true"></i>Cronograma Áreas Comuns</div>
         <div class="nav-item" onclick="showPage('etapas')"><i class="ti ti-list-check" aria-hidden="true"></i>Etapas Adm.</div>
       </div>
       <div class="sidebar-section">
@@ -364,7 +364,7 @@ textarea.form-input{min-height:80px;resize:vertical;}
           <div class="module-card" onclick="showPage('clientes')"><div class="module-icon"><i class="ti ti-building" aria-hidden="true"></i></div><div class="module-name">Clientes</div><div class="module-desc">60 unidades, contratos e recebimentos</div></div>
           <div class="module-card" onclick="showPage('cronograma')"><div class="module-icon"><i class="ti ti-timeline" aria-hidden="true"></i></div><div class="module-name">Cronograma Global</div><div class="module-desc">20 etapas da obra, Gantt e % realizado</div></div>
           <div class="module-card" onclick="showPage('unidades')"><div class="module-icon"><i class="ti ti-layout-grid" aria-hidden="true"></i></div><div class="module-name">Cronograma Unidades</div><div class="module-desc">Progresso individual por apartamento</div></div>
-          <div class="module-card" onclick="showPage('pendencias')"><div class="module-icon"><i class="ti ti-swimming-pool" aria-hidden="true"></i></div><div class="module-name">Cronograma Áreas Comuns</div><div class="module-desc">Progresso por área · Garagens, térreo e lazer</div></div>
+          <div class="module-card" onclick="showPage('pendencias')"><div class="module-icon"><i class="ti ti-beach" aria-hidden="true"></i></div><div class="module-name">Cronograma Áreas Comuns</div><div class="module-desc">Progresso por área · Garagens, térreo e lazer</div></div>
           <div class="module-card" onclick="showPage('etapas')"><div class="module-icon"><i class="ti ti-list-check" aria-hidden="true"></i></div><div class="module-name">Etapas Adm.</div><div class="module-desc">Legal, comercial, obra e entrega</div></div>
           <div class="module-card" onclick="showPage('financeiro')"><div class="module-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="module-name">Financeiro</div><div class="module-desc">Contas a pagar e a receber</div></div>
           <div class="module-card" onclick="showPage('fornecedores')"><div class="module-icon"><i class="ti ti-users" aria-hidden="true"></i></div><div class="module-name">Fornecedores</div><div class="module-desc">Contratos, orçamentos e certidões</div></div>
@@ -1533,10 +1533,21 @@ async function salvarCliente() {
   const entrada = parseFloat(document.getElementById('clienteEntrada').value)||0;
   const numParcelas = parseInt(document.getElementById('clienteNumParcelas').value)||0;
   const primVenc = document.getElementById('clientePrimVenc').value;
+  const usaCUB = document.getElementById('clienteUsaCUB')?.checked || false;
+  const cubRaw = localStorage.getItem('cub_valor')||'0';
+  const cubAtual = parseFloat(cubRaw.indexOf(',')>=0 ? cubRaw.replace(/\./g,'').replace(',','.') : cubRaw) || 0;
+
   if (valorVenda > 0 && numParcelas > 0 && primVenc) {
-    const saldo = valorVenda - entrada;
+    // Se em CUB: saldo = (valorVendaCUB - entradaCUB) * cubAtual
+    // Ex: (192 - 48) CUB * 3121.62 = R$ 449.513,28 / 48 = R$ 9.364,86/parcela
+    const fator = (usaCUB && cubAtual > 0) ? cubAtual : 1;
+    const saldoCUB = valorVenda - entrada;
+    const saldo = saldoCUB * fator;
+    const valorVendaRS = valorVenda * fator;
+    const entradaRS = entrada * fator;
     const vlrParcela = parseFloat((saldo/numParcelas).toFixed(2));
-    await sbClient.from('financeiro_unidade').insert({ unidade_id: unidadeId, valor_venda: valorVenda, entrada, num_parcelas: numParcelas, saldo_devedor: saldo });
+    console.log('CUB:', cubAtual, 'usaCUB:', usaCUB, 'saldoCUB:', saldoCUB, 'parcelaRS:', vlrParcela);
+    await sbClient.from('financeiro_unidade').insert({ unidade_id: unidadeId, valor_venda: valorVendaRS, entrada: entradaRS, num_parcelas: numParcelas, indexado_cub: usaCUB, valor_venda_cub: usaCUB?valorVenda:null, cub_base: usaCUB?cubAtual:null, saldo_devedor: saldo });
     const parcelas = [];
     const base = new Date(primVenc+'T12:00:00');
     for (let i = 0; i < numParcelas; i++) {
@@ -3518,6 +3529,24 @@ async function verificarNotificacoes() {
 // PRESTADORES DE SERVIÇOS
 // ============================================================
 let _todosPrests = [];
+
+async function salvarPrestador() {
+  const nome = document.getElementById('prestNome').value.trim();
+  if (!nome) { showToast('Informe o nome.','err'); return; }
+  const payload = {
+    nome,
+    cpf_cnpj: document.getElementById('prestCpf').value,
+    especialidade: document.getElementById('prestEspec').value,
+    telefone: document.getElementById('prestTel').value,
+    email: document.getElementById('prestEmail').value,
+    status: document.getElementById('prestStatus').value || 'ativo'
+  };
+  const { error } = await sbClient.from('prestadores').insert(payload);
+  if (error) { showToast('Erro: '+error.message,'err'); return; }
+  closeModal('modalPrestador');
+  showToast('Prestador salvo!','ok');
+  loadPrestadores();
+}
 
 async function loadPrestadores() {
   const { data: prestadores } = await sbClient.from('prestadores').select('*').order('nome');
