@@ -5,9 +5,8 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<!-- v1783822336 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mônaco Residence — Gestão v1783822336</title>
+<title>Mônaco Residence — Gestão</title>
 <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
@@ -325,14 +324,14 @@ textarea.form-input{min-height:80px;resize:vertical;}
         <div class="sidebar-label">Obra</div>
         <div class="nav-item" onclick="showPage('cronograma')"><i class="ti ti-timeline" aria-hidden="true"></i>Cronograma Global</div>
         <div class="nav-item" onclick="showPage('unidades')"><i class="ti ti-layout-grid" aria-hidden="true"></i>Cronograma Unidades</div>
-        <div class="nav-item" onclick="showPage('pendencias')"><i class="ti ti-alert-triangle" aria-hidden="true"></i>Cronograma Áreas Comuns</div>
+        <div class="nav-item" onclick="showPage('pendencias')"><i class="ti ti-swimming-pool" aria-hidden="true"></i>Cronograma Áreas Comuns</div>
         <div class="nav-item" onclick="showPage('etapas')"><i class="ti ti-list-check" aria-hidden="true"></i>Etapas Adm.</div>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-label">Financeiro</div>
         <div class="nav-item" onclick="showPage('financeiro')"><i class="ti ti-cash" aria-hidden="true"></i>Contas<span class="nav-badge warn" id="badgeContas" style="display:none;">0</span></div>
         <div class="nav-item" onclick="showPage('fornecedores')"><i class="ti ti-users" aria-hidden="true"></i>Fornecedores</div>
-      <div class="nav-item" onclick="showPage('prestadores')"><i class="ti ti-hard-hat" aria-hidden="true"></i>Prestadores</div>
+      <div class="nav-item" onclick="showPage('prestadores')"><i class="ti ti-tools" aria-hidden="true"></i>Prestadores</div>
         <div class="nav-item" onclick="showPage('estoque')"><i class="ti ti-package" aria-hidden="true"></i>Estoque<span class="nav-badge" id="badgeEstoque" style="display:none;">0</span></div>
       </div>
       <div class="sidebar-section">
@@ -365,11 +364,11 @@ textarea.form-input{min-height:80px;resize:vertical;}
           <div class="module-card" onclick="showPage('clientes')"><div class="module-icon"><i class="ti ti-building" aria-hidden="true"></i></div><div class="module-name">Clientes</div><div class="module-desc">60 unidades, contratos e recebimentos</div></div>
           <div class="module-card" onclick="showPage('cronograma')"><div class="module-icon"><i class="ti ti-timeline" aria-hidden="true"></i></div><div class="module-name">Cronograma Global</div><div class="module-desc">20 etapas da obra, Gantt e % realizado</div></div>
           <div class="module-card" onclick="showPage('unidades')"><div class="module-icon"><i class="ti ti-layout-grid" aria-hidden="true"></i></div><div class="module-name">Cronograma Unidades</div><div class="module-desc">Progresso individual por apartamento</div></div>
-          <div class="module-card" onclick="showPage('pendencias')"><div class="module-icon"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div><div class="module-name">Cronograma Áreas Comuns</div><div class="module-desc">Progresso por área · Garagens, térreo e lazer</div></div>
+          <div class="module-card" onclick="showPage('pendencias')"><div class="module-icon"><i class="ti ti-swimming-pool" aria-hidden="true"></i></div><div class="module-name">Cronograma Áreas Comuns</div><div class="module-desc">Progresso por área · Garagens, térreo e lazer</div></div>
           <div class="module-card" onclick="showPage('etapas')"><div class="module-icon"><i class="ti ti-list-check" aria-hidden="true"></i></div><div class="module-name">Etapas Adm.</div><div class="module-desc">Legal, comercial, obra e entrega</div></div>
           <div class="module-card" onclick="showPage('financeiro')"><div class="module-icon"><i class="ti ti-cash" aria-hidden="true"></i></div><div class="module-name">Financeiro</div><div class="module-desc">Contas a pagar e a receber</div></div>
           <div class="module-card" onclick="showPage('fornecedores')"><div class="module-icon"><i class="ti ti-users" aria-hidden="true"></i></div><div class="module-name">Fornecedores</div><div class="module-desc">Contratos, orçamentos e certidões</div></div>
-          <div class="module-card" onclick="showPage('prestadores')"><div class="module-icon"><i class="ti ti-hard-hat" aria-hidden="true"></i></div><div class="module-name">Prestadores de Serviços</div><div class="module-desc">Tabela de serviços e medições mensais</div></div>
+          <div class="module-card" onclick="showPage('prestadores')"><div class="module-icon"><i class="ti ti-tools" aria-hidden="true"></i></div><div class="module-name">Prestadores de Serviços</div><div class="module-desc">Tabela de serviços e medições mensais</div></div>
           <div class="module-card" onclick="showPage('estoque')"><div class="module-icon"><i class="ti ti-package" aria-hidden="true"></i></div><div class="module-name">Compras e Estoque</div><div class="module-desc">Materiais, entradas e saídas</div></div>
           <div class="module-card" onclick="showPage('documentos')"><div class="module-icon"><i class="ti ti-folder" aria-hidden="true"></i></div><div class="module-name">Documentos</div><div class="module-desc">Alvarás, ARTs, projetos e contratos</div></div>
           <div class="module-card" onclick="showPage('reunioes')"><div class="module-icon"><i class="ti ti-message-2" aria-hidden="true"></i></div><div class="module-name">Reuniões</div><div class="module-desc">Atas, decisões e pendências</div></div>
@@ -381,6 +380,18 @@ textarea.form-input{min-height:80px;resize:vertical;}
       <div class="page" id="page-clientes">
         <div class="page-header"><div class="page-title"><span>Clientes</span> e Unidades</div><div class="page-subtitle">60 apartamentos · Andares 6 a 21 · 4 unidades por andar</div></div>
         <div class="gold-divider"></div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;">
+          <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:10px 16px;display:flex;align-items:center;gap:12px;">
+            <div>
+              <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.08em;text-transform:uppercase;">CUB/SC Atual</div>
+              <div style="font-size:20px;font-weight:600;color:var(--gold);font-family:Arial,sans-serif;" id="cubValor">—</div>
+              <div style="font-size:10px;color:var(--text-dim);font-family:Arial,sans-serif;" id="cubData">Não configurado</div>
+            </div>
+            <button class="btn btn-sm" onclick="editarCUB()" title="Editar CUB manualmente" style="padding:6px 10px;">
+              <i class="ti ti-pencil" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
         <div class="kpi-row" id="kpiClientes">
           <div class="kpi"><div class="kpi-label">Total unidades</div><div class="kpi-value" id="kpiTotal">60</div></div>
           <div class="kpi"><div class="kpi-label">Vendidas</div><div class="kpi-value green" id="kpiVendidas">—</div></div>
@@ -685,6 +696,11 @@ textarea.form-input{min-height:80px;resize:vertical;}
       <div class="form-row">
         <div class="form-group"><label class="form-label">Número de parcelas</label><input type="number" class="form-input" id="clienteNumParcelas" min="1" max="240" placeholder="48"></div>
         <div class="form-group"><label class="form-label">Vencimento 1ª parcela</label><input type="date" class="form-input" id="clientePrimVenc"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius);border:0.5px solid var(--border);margin:0 0 0.5rem;">
+        <input type="checkbox" id="clienteUsaCUB" style="accent-color:var(--gold);width:16px;height:16px;cursor:pointer;" onchange="toggleCUBModal()">
+        <label for="clienteUsaCUB" style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;cursor:pointer;">Indexar em CUB/SC</label>
+        <span id="cubPreviewModal" style="font-size:11px;color:var(--gold);font-family:Arial,sans-serif;margin-left:auto;"></span>
       </div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('modalCliente')">Cancelar</button><button class="btn btn-primary" id="btnSalvarCliente" onclick="salvarCliente()">Salvar cliente</button></div>
@@ -1390,7 +1406,8 @@ async function loadAuditoria() {
 // CLIENTES
 // ============================================================
 async function loadClientes() {
-  const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',21).order('andar').order('posicao');
+  carregarCUB();
+  const { data: unidades } = await sbClient.from('unidades').select('*').gte('andar',6).lte('andar',20).order('andar').order('posicao');
   if (!unidades) return;
   const total = unidades.length;
   const vendidas = unidades.filter(u=>u.status==='vendida').length;
@@ -1461,7 +1478,7 @@ function buildUnitGrid(unidades) {
   const map = {};
   unidades.forEach(u => map[u.numero] = u.status);
   // Ordem crescente: 6 em cima, 21 embaixo
-  for (let f = 6; f <= 21; f++) {
+  for (let f = 6; f <= 20; f++) {
     // Sem label lateral — só as células
     for (let u = 1; u <= 4; u++) {
       const num = (f*100)+u;
@@ -1802,7 +1819,7 @@ async function atualizarEtapa(id, campo, valor) {
 function buildAndarFilter() {
   const sel = document.getElementById('filterAndar');
   sel.innerHTML = '<option value="">Todos os andares</option>';
-  for (let f = 6; f <= 21; f++) sel.innerHTML += `<option value="${f}">${f}º andar</option>`;
+  for (let f = 6; f <= 20; f++) sel.innerHTML += `<option value="${f}">${f}º andar</option>`;
   // Preencher filtro de disciplinas
   const discSel = document.getElementById('filterDiscExport');
   if (discSel) {
@@ -2294,8 +2311,8 @@ async function loadFinanceiro() {
   const aPagar = pending.reduce((s,c)=>s+parseFloat(c.valor||0),0);
   const aReceber = parcelas?.filter(p=>p.status==='pendente').reduce((s,p)=>s+parseFloat(p.valor||0),0)||0;
   const atrasadas = parcelas?.filter(p=>p.status==='atrasado').length||0;
-  document.getElementById('kpiAPagar').textContent = 'R$ '+aPagar.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
-  document.getElementById('kpiAReceber').textContent = 'R$ '+aReceber.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  document.getElementById('kpiAPagar').textContent = 'R$ '+aPagar.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('kpiAReceber').textContent = 'R$ '+aReceber.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   document.getElementById('kpiAtrasadas').textContent = atrasadas;
   document.getElementById('kpiVencendo').textContent = vencendo;
 
@@ -3513,178 +3530,41 @@ async function loadPrestadores() {
   }
   const stCls = {ativo:'badge-ok',inativo:'badge-gray',aguardando:'badge-warn'};
   const stLbl = {ativo:'Ativo',inativo:'Inativo',aguardando:'Aguardando'};
-  wrap.innerHTML = prestadores.map(p => `
-    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;">
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 1.25rem;">
-        <div style="flex:1;">
-          <div style="font-size:15px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;">${p.nome}</div>
-          <div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;">${p.especialidade||'—'} · ${p.telefone||'—'}</div>
-        </div>
-        <span class="status-badge ${stCls[p.status]||'badge-gray'}">${stLbl[p.status]||p.status}</span>
-        <button class="btn btn-sm" onclick="abrirDetalhePrestador('${p.id}','${p.nome.replace(/'/g,"\'")}')">Ver detalhes</button>
-      </div>
-    </div>`).join('');
-}
-
-async function salvarPrestador() {
-  const nome = document.getElementById('prestNome').value.trim();
-  if (!nome) { showToast('Informe o nome.','err'); return; }
-  const payload = { nome, cpf_cnpj: document.getElementById('prestCpf').value, especialidade: document.getElementById('prestEspec').value, telefone: document.getElementById('prestTel').value, email: document.getElementById('prestEmail').value, status: document.getElementById('prestStatus').value };
-  const { error } = await sbClient.from('prestadores').insert(payload);
-  if (error) { showToast('Erro: '+error.message,'err'); return; }
-  closeModal('modalPrestador'); showToast('Prestador salvo!','ok'); loadPrestadores();
-}
-
-async function abrirDetalhePrestador(prestadorId, nome) {
-  const [{ data: servicos }, { data: medicoes }] = await Promise.all([
-    sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao'),
-    sbClient.from('prestador_medicoes').select('*, prestador_servicos(descricao,unidade)').eq('prestador_id', prestadorId).order('mes_referencia', {ascending:false}).limit(20)
-  ]);
-
-  // Preencher select de serviços no modal de medição
-  const sel = document.getElementById('medServico');
-  sel.innerHTML = '<option value="">Selecionar serviço...</option>' + (servicos||[]).map(s=>`<option value="${s.id}" data-valor="${s.valor_unitario}">${s.descricao} (R$ ${parseFloat(s.valor_unitario).toLocaleString('pt-BR',{minimumFractionDigits:2})}/${s.unidade})</option>`).join('');
-  document.getElementById('medPrestadorId').value = prestadorId;
-  document.getElementById('svcPrestadorId').value = prestadorId;
-  document.getElementById('modalServicoTitle').textContent = 'Novo serviço — ' + nome;
-  document.getElementById('modalMedicaoTitle').textContent = 'Nova medição — ' + nome;
-
-  // Abrir painel lateral reutilizando modal de unidade
-  document.getElementById('modalUnidadeTitle').textContent = 'Prestador — ' + nome;
-  const body = document.getElementById('modalUnidadeBody');
-
-  const totalMed = (medicoes||[]).reduce((s,m)=>s+parseFloat(m.valor_total||0),0);
-  const medCls = {aberta:'badge-gray',aprovada:'badge-warn',paga:'badge-ok'};
-  const medLbl = {aberta:'Aberta',aprovada:'Aprovada',paga:'Paga'};
-
-  body.innerHTML = `
-    <div style="padding:1rem;">
-      <div style="margin-bottom:1rem;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-          <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Tabela de serviços</div>
-          <button class="btn btn-sm" onclick="openModal('modalServicoPrestador')"><i class="ti ti-plus"></i> Novo serviço</button>
-        </div>
-        ${(servicos||[]).length===0?'<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhum serviço cadastrado.</div>':
-        `<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
-          <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">
-            <thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Unidade</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor unit.</th></tr></thead>
-            <tbody>${(servicos||[]).map(s=>`<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);"><td style="padding:8px 12px;color:var(--text-muted);">${s.descricao}</td><td style="padding:8px 12px;color:var(--text-dim);">${s.unidade}</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ ${parseFloat(s.valor_unitario).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td></tr>`).join('')}</tbody>
-          </table></div>`}
-      </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-          <div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Medições mensais · Total: R$ ${totalMed.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-          <button class="btn btn-sm" onclick="closeModal('modalUnidade');setTimeout(()=>abrirModalMedicaoCompleta(''+prestadorId+'',''+nome+''),200)"><i class="ti ti-plus"></i> Nova medição</button>
-        </div>
-        ${(medicoes||[]).length===0?'<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhuma medição registrada.</div>':
-        `<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
-          <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">
-            <thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Mês</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Status</th></tr></thead>
-            <tbody>${(medicoes||[]).map(m=>`<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);"><td style="padding:8px 12px;color:var(--text-muted);">${m.mes_referencia}</td><td style="padding:8px 12px;color:var(--text-muted);">${m.prestador_servicos?.descricao||'—'}</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ ${parseFloat(m.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="padding:8px 12px;"><span class="status-badge ${medCls[m.status]||'badge-gray'}">${medLbl[m.status]||m.status}</span></td></tr>`).join('')}</tbody>
-          </table></div>`}
-      </div>
-    </div>`;
-  openModal('modalUnidade');
-}
-
-async function salvarServicoPrestador() {
-  const desc = document.getElementById('svcDescricao').value.trim();
-  const prestId = document.getElementById('svcPrestadorId').value;
-  if (!desc || !prestId) { showToast('Preencha a descrição.','err'); return; }
-  const { error } = await sbClient.from('prestador_servicos').insert({ prestador_id: prestId, descricao: desc, unidade: document.getElementById('svcUnidade').value, valor_unitario: parseFloat(document.getElementById('svcValor').value)||0 });
-  if (error) { showToast('Erro: '+error.message,'err'); return; }
-  closeModal('modalServicoPrestador'); showToast('Serviço salvo!','ok');
-}
-
-function calcularMedicao() {
-  const sel = document.getElementById('medServico');
-  const opt = sel.options[sel.selectedIndex];
-  const valorUnit = parseFloat(opt?.dataset?.valor||0);
-  const qtd = parseFloat(document.getElementById('medQtd').value)||0;
-  if (valorUnit && qtd) document.getElementById('medValor').value = (valorUnit * qtd).toFixed(2);
-}
-
-async function salvarMedicao() {
-  const prestId = document.getElementById('medPrestadorId').value;
-  const mes = document.getElementById('medMes').value;
-  const servicoId = document.getElementById('medServico').value;
-  if (!prestId || !mes) { showToast('Preencha os campos obrigatórios.','err'); return; }
-  const { error } = await sbClient.from('prestador_medicoes').insert({ prestador_id: prestId, servico_id: servicoId||null, mes_referencia: mes, quantidade: parseFloat(document.getElementById('medQtd').value)||0, valor_total: parseFloat(document.getElementById('medValor').value)||0, status: document.getElementById('medStatus').value, observacao: document.getElementById('medObs').value });
-  if (error) { showToast('Erro: '+error.message,'err'); return; }
-  closeModal('modalMedicao'); showToast('Medição registrada!','ok');
-}
-
-// ============================================================
-// ORÇAMENTOS DE FORNECEDORES
-// ============================================================
-// Wrapper para evitar problemas com aspas no nome
-let _fornMap = {};
-function abrirOrcForn(id) {
-  const nome = _fornMap[id] || id;
-  abrirOrcamentosFornecedor(id, nome);
-}
-
-async function abrirOrcamentosFornecedor(fornId, fornNome) {
-  document.getElementById('orcFornecedorId').value = fornId;
-  document.getElementById('modalOrcTitle').textContent = 'Orçamento — ' + fornNome;
-  const { data: itens } = await sbClient.from('fornecedor_orcamentos').select('*').eq('fornecedor_id', fornId).order('descricao');
-  document.getElementById('modalUnidadeTitle').textContent = 'Orçamento — ' + fornNome;
-  const body = document.getElementById('modalUnidadeBody');
-  body.innerHTML = `
-    <div style="padding:1rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-        <div style="font-size:12px;color:var(--text-muted);font-family:Arial,sans-serif;">${(itens||[]).length} itens</div>
-        <button class="btn btn-sm btn-primary" onclick="openModal('modalOrcamentoForn')"><i class="ti ti-plus"></i> Novo item</button>
-      </div>
-      ${(itens||[]).length===0?'<div style="font-size:13px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhum item cadastrado.</div>':
-      `<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
-        <table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">
-          <thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Descrição</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);">Marca</th><th style="padding:8px 12px;text-align:center;font-size:10px;color:var(--text-dim);">Un.</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);">Valor unit.</th><th style="padding:8px 12px;"></th></tr></thead>
-          <tbody>${(itens||[]).map(i=>`<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);"><td style="padding:8px 12px;color:var(--text);">${i.descricao}</td><td style="padding:8px 12px;color:var(--text-dim);">${i.marca||'—'}</td><td style="padding:8px 12px;text-align:center;color:var(--text-dim);">${i.unidade}</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ ${parseFloat(i.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="padding:8px 12px;"><button class="btn btn-danger btn-sm" style="padding:3px 8px;" onclick="deletarOrcItem('${i.id}','${fornId}','${fornNome.replace(/'/g,"\'")}')"><i class="ti ti-trash"></i></button></td></tr>`).join('')}</tbody>
-        </table></div>`}
-    </div>`;
-  openModal('modalUnidade');
-}
-
-async function salvarOrcamentoForn() {
-  const fornId = document.getElementById('orcFornecedorId').value;
-  const desc = document.getElementById('orcDescricao').value.trim();
-  if (!fornId || !desc) { showToast('Preencha a descrição.','err'); return; }
-  const { error } = await sbClient.from('fornecedor_orcamentos').insert({ fornecedor_id: fornId, descricao: desc, unidade: document.getElementById('orcUnidade').value, valor_unitario: parseFloat(document.getElementById('orcValor').value)||0, marca: document.getElementById('orcMarca').value, observacao: document.getElementById('orcObs').value });
-  if (error) { showToast('Erro: '+error.message,'err'); return; }
-  closeModal('modalOrcamentoForn'); showToast('Item salvo!','ok');
-  const nome = document.getElementById('modalUnidadeTitle').textContent.replace('Orçamento — ','');
-  abrirOrcamentosFornecedor(fornId, nome);
-}
-
-async function deletarOrcItem(itemId, fornId, fornNome) {
-  if (!confirm('Excluir este item?')) return;
-  await sbClient.from('fornecedor_orcamentos').delete().eq('id', itemId);
-  showToast('Item removido.','ok');
-  abrirOrcamentosFornecedor(fornId, fornNome);
-}
-
-// ============================================================
-// MATERIAIS FALTANTES
-// ============================================================
-async function loadMateriaiFaltantes() {
-  const { data } = await sbClient.from('materiais_faltantes').select('*').neq('status','ok').order('criado_em', {ascending:false});
-  const body = document.getElementById('faltantesBody');
-  if (!body) return;
-  if (!data || !data.length) { body.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum material faltante.</td></tr>'; return; }
-  const stCls = {em_orcamento:'badge-info',aguardando_entrega:'badge-warn',em_falta:'badge-danger',ok:'badge-ok'};
-  const stLbl = {em_orcamento:'Em orçamento',aguardando_entrega:'Aguard. entrega',em_falta:'Em falta',ok:'OK'};
-  body.innerHTML = data.map(m => {
-    const entrega = m.data_entrega ? new Date(m.data_entrega+'T12:00:00').toLocaleDateString('pt-BR') : '—';
-    return `<tr>
-      <td><input type="checkbox" ${m.status==='ok'?'checked':''} onchange="marcarFaltanteOk('${m.id}',this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--gold);"></td>
-      <td style="color:var(--text);">${m.nome}</td>
-      <td>${m.quantidade} ${m.unidade}</td>
-      <td>${entrega}</td>
-      <td><span class="status-badge ${stCls[m.status]||'badge-gray'}">${stLbl[m.status]||m.status}</span></td>
-      <td><button class="btn btn-danger btn-sm" onclick="deletarFaltante('${m.id}')"><i class="ti ti-trash"></i></button></td>
-    </tr>`;
-  }).join('');
+  wrap.innerHTML = '';
+  let _todosPrests = prestadores;
+  prestadores.forEach(p => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;';
+    const inner = document.createElement('div');
+    inner.style.cssText = 'display:flex;align-items:center;gap:8px;padding:14px 1.25rem;flex-wrap:wrap;';
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0;';
+    info.innerHTML = '<div style="font-size:15px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;">'+p.nome+'</div><div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;margin-top:2px;">'+(p.especialidade||'—')+' · '+(p.telefone||'—')+'</div>';
+    const badge = document.createElement('span');
+    badge.className = 'status-badge '+(stCls[p.status]||'badge-gray');
+    badge.textContent = stLbl[p.status]||p.status;
+    const btnVer = document.createElement('button');
+    btnVer.className = 'btn btn-sm';
+    btnVer.textContent = 'Detalhes';
+    btnVer.addEventListener('click', () => abrirDetalhePrestador(p.id, p.nome));
+    const btnEd = document.createElement('button');
+    btnEd.className = 'btn btn-sm';
+    btnEd.innerHTML = '<i class="ti ti-pencil" aria-hidden="true"></i>';
+    btnEd.title = 'Editar';
+    btnEd.addEventListener('click', () => editarPrestador(p.id));
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn btn-danger btn-sm';
+    btnDel.innerHTML = '<i class="ti ti-trash" aria-hidden="true"></i>';
+    btnDel.title = 'Excluir';
+    btnDel.addEventListener('click', () => excluirPrestador(p.id, p.nome));
+    inner.appendChild(info);
+    inner.appendChild(badge);
+    inner.appendChild(btnVer);
+    inner.appendChild(btnEd);
+    inner.appendChild(btnDel);
+    card.appendChild(inner);
+    wrap.appendChild(card);
+  });
 }
 
 async function salvarMaterialFaltante() {
@@ -3851,7 +3731,10 @@ async function abrirModalMedicaoCompleta(prestadorId, prestadorNome) {
   const footer = document.querySelector('#modalMedicao .modal-footer');
   footer.innerHTML = '';
   const btnCancel = btn({class:'btn',text:'Cancelar'});
-  btnCancel.addEventListener('click', () => closeModal('modalMedicao'));
+  btnCancel.addEventListener('click', () => {
+    const mo = document.getElementById('modalMedicao');
+    if (mo) { mo.style.display = 'none'; mo.style.zIndex = ''; }
+  });
   const btnSalvar = btn({class:'btn btn-primary',text:'Salvar medição'});
   btnSalvar.addEventListener('click', () => salvarMedicaoCompleta(prestadorId, prestadorNome));
   footer.appendChild(btnCancel);
@@ -4042,8 +3925,188 @@ ${obs?'<div style="font-size:12px;color:#666;margin-bottom:1.5rem;"><strong>Obse
 // LOGIN com Enter
 document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
+// ============================================================
+// CUB/SC
+// ============================================================
+let _cubAtual = 0;
+let _cubData = '';
+
+function carregarCUB() {
+  const raw = localStorage.getItem('cub_valor')||'0';
+  _cubAtual = parseFloat(raw.indexOf(',')>=0 ? raw.replace(/\./g,'').replace(',','.') : raw)||0;
+  _cubData = localStorage.getItem('cub_data')||'';
+  atualizarExibicaoCUB();
+}
+
+function atualizarExibicaoCUB() {
+  const elV = document.getElementById('cubValor');
+  const elD = document.getElementById('cubData');
+  if (elV) elV.textContent = _cubAtual ? 'R$ '+_cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+  if (elD) elD.textContent = _cubData || 'Não configurado';
+}
+
+function editarCUB() {
+  const atual = _cubAtual ? _cubAtual.toFixed(2).replace('.',',') : '';
+  const novo = prompt('Digite o valor do CUB/SC (ex: 3.121,62):', atual);
+  if (novo === null) return;
+  const limpo = novo.trim().replace(/\./g,'').replace(',','.');
+  const valor = parseFloat(limpo);
+  if (!valor || valor < 100) { showToast('Valor inválido.','err'); return; }
+  _cubAtual = valor;
+  _cubData = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  localStorage.setItem('cub_valor', String(valor));
+  localStorage.setItem('cub_data', _cubData);
+  atualizarExibicaoCUB();
+  showToast('CUB atualizado: R$ '+valor.toLocaleString('pt-BR',{minimumFractionDigits:2}),'ok');
+  // Reindexar parcelas automaticamente
+  reindexarParcelasCUB(valor);
+}
+
+function toggleCUBModal() {
+  const usa = document.getElementById('clienteUsaCUB')?.checked;
+  const prev = document.getElementById('cubPreviewModal');
+  if (prev) prev.textContent = usa ? (_cubAtual ? 'CUB: R$ '+_cubAtual.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '⚠ Configure o CUB primeiro') : '';
+}
+
+async function reindexarParcelasCUB(novoCUB) {
+  const { data: fins } = await sbClient.from('financeiro_unidade').select('*').eq('indexado_cub',true);
+  if (!fins || !fins.length) return;
+  let count = 0;
+  for (const fin of fins) {
+    if (!fin.valor_venda_cub || !fin.unidade_id) continue;
+    const cubBase = parseFloat(fin.cub_base)||1;
+    const vvCUB = parseFloat(fin.valor_venda_cub);
+    const entCUB = fin.entrada ? parseFloat(fin.entrada)/cubBase : 0;
+    const novoVV = vvCUB * novoCUB;
+    const novaEnt = entCUB * novoCUB;
+    const novoSaldo = novoVV - novaEnt;
+    const novaParcela = parseFloat((novoSaldo / (fin.num_parcelas||1)).toFixed(2));
+    await sbClient.from('financeiro_unidade').update({valor_venda:novoVV,entrada:novaEnt,saldo_devedor:novoSaldo,cub_base:novoCUB}).eq('id',fin.id);
+    await sbClient.from('parcelas').update({valor:novaParcela}).eq('unidade_id',fin.unidade_id).in('status',['pendente','atrasado']);
+    count++;
+  }
+  if (count > 0) showToast(count+' contrato(s) reindexados pelo novo CUB!','ok');
+}
+
+// ============================================================
+// EDITAR/EXCLUIR PRESTADOR
+// ============================================================
+async function editarPrestador(id) {
+  const p = _todosPrests ? _todosPrests.find(x=>x.id===id) : null;
+  if (!p) return;
+  document.getElementById('prestNome').value = p.nome||'';
+  document.getElementById('prestCpf').value = p.cpf_cnpj||'';
+  document.getElementById('prestEspec').value = p.especialidade||'';
+  document.getElementById('prestTel').value = p.telefone||'';
+  document.getElementById('prestEmail').value = p.email||'';
+  document.getElementById('prestStatus').value = p.status||'ativo';
+  const title = document.querySelector('#modalPrestador .modal-title');
+  const btnSalvar = document.querySelector('#modalPrestador .btn-primary');
+  if (title) title.textContent = 'Editar prestador';
+  if (btnSalvar) { btnSalvar.textContent = 'Salvar alterações'; btnSalvar.onclick = () => atualizarPrestador(id); }
+  openModal('modalPrestador');
+}
+
+async function atualizarPrestador(id) {
+  const payload = { nome: document.getElementById('prestNome').value.trim(), cpf_cnpj: document.getElementById('prestCpf').value, especialidade: document.getElementById('prestEspec').value, telefone: document.getElementById('prestTel').value, email: document.getElementById('prestEmail').value, status: document.getElementById('prestStatus').value };
+  if (!payload.nome) { showToast('Informe o nome.','err'); return; }
+  await sbClient.from('prestadores').update(payload).eq('id',id);
+  const title = document.querySelector('#modalPrestador .modal-title');
+  const btnSalvar = document.querySelector('#modalPrestador .btn-primary');
+  if (title) title.textContent = 'Novo prestador de serviços';
+  if (btnSalvar) { btnSalvar.textContent = 'Salvar'; btnSalvar.onclick = () => salvarPrestador(); }
+  closeModal('modalPrestador');
+  showToast('Prestador atualizado!','ok');
+  loadPrestadores();
+}
+
+async function excluirPrestador(id, nome) {
+  if (!confirm('Excluir '+nome+'?')) return;
+  await sbClient.from('prestadores').delete().eq('id',id);
+  showToast('Prestador removido.','ok');
+  loadPrestadores();
+}
+
 // INIT
 boot();
 </script>
 </body>
-</html>
+</html>async function abrirDetalhePrestador(prestadorId, nome) {
+  const [{ data: servicos }, { data: medicoes }] = await Promise.all([
+    sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao'),
+    sbClient.from('prestador_medicoes').select('*, prestador_servicos(descricao,unidade)').eq('prestador_id', prestadorId).order('mes_referencia',{ascending:false}).limit(20)
+  ]);
+  document.getElementById('medPrestadorId').value = prestadorId;
+  document.getElementById('svcPrestadorId').value = prestadorId;
+  document.getElementById('modalServicoTitle').textContent = 'Novo serviço — ' + nome;
+  document.getElementById('modalMedicaoTitle').textContent = 'Nova medição — ' + nome;
+  document.getElementById('modalUnidadeTitle').textContent = 'Prestador — ' + nome;
+  const body = document.getElementById('modalUnidadeBody');
+  const medCls = {aberta:'badge-gray',aprovada:'badge-warn',paga:'badge-ok'};
+  const medLbl = {aberta:'Aberta',aprovada:'Aprovada',paga:'Paga'};
+  const totalMed = (medicoes||[]).reduce((s,m)=>s+parseFloat(m.valor_total||0),0);
+
+  // Montar HTML via string (sem template literals aninhados)
+  let html = '<div style="padding:1rem;">';
+  // Serviços
+  html += '<div style="margin-bottom:1rem;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">';
+  html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Tabela de serviços</div>';
+  html += '<button class="btn btn-sm" id="btnNovoServico"><i class="ti ti-plus"></i> Novo serviço</button>';
+  html += '</div>';
+  if ((servicos||[]).length === 0) {
+    html += '<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhum serviço cadastrado.</div>';
+  } else {
+    html += '<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">';
+    html += '<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">';
+    html += '<thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Unidade</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor unit.</th></tr></thead><tbody>';
+    (servicos||[]).forEach(s => {
+      html += '<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);">';
+      html += '<td style="padding:8px 12px;color:var(--text-muted);">'+s.descricao+'</td>';
+      html += '<td style="padding:8px 12px;color:var(--text-dim);">'+s.unidade+'</td>';
+      html += '<td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ '+parseFloat(s.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+  // Medições
+  html += '<div>';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">';
+  html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Medições · Total: R$ '+totalMed.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div>';
+  html += '<button class="btn btn-sm" id="btnNovaMedicao"><i class="ti ti-plus"></i> Nova medição</button>';
+  html += '</div>';
+  if ((medicoes||[]).length === 0) {
+    html += '<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhuma medição registrada.</div>';
+  } else {
+    html += '<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">';
+    html += '<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">';
+    html += '<thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Mês</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Status</th></tr></thead><tbody>';
+    (medicoes||[]).forEach(m => {
+      html += '<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);">';
+      html += '<td style="padding:8px 12px;color:var(--text-muted);">'+m.mes_referencia+'</td>';
+      html += '<td style="padding:8px 12px;color:var(--text-muted);">'+(m.prestador_servicos&&m.prestador_servicos.descricao?m.prestador_servicos.descricao:'—')+'</td>';
+      html += '<td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ '+parseFloat(m.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>';
+      html += '<td style="padding:8px 12px;"><span class="status-badge '+(medCls[m.status]||'badge-gray')+'">'+(medLbl[m.status]||m.status)+'</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div></div>';
+  body.innerHTML = html;
+
+  openModal('modalUnidade');
+
+  // Adicionar eventos via JS
+  const btnSvc = document.getElementById('btnNovoServico');
+  if (btnSvc) btnSvc.addEventListener('click', () => openModal('modalServicoPrestador'));
+
+  const btnMed = document.getElementById('btnNovaMedicao');
+  if (btnMed) btnMed.addEventListener('click', () => {
+    // Abrir medição por cima sem fechar o detalhe
+    const medModal = document.getElementById('modalMedicao');
+    if (medModal) { medModal.style.display = 'flex'; medModal.style.zIndex = '1100'; }
+  });
+}
+
+
