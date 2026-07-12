@@ -4139,9 +4139,6 @@ async function abrirDetalhePrestador(prestadorId, nome) {
   html += '</div></div>';
   body.innerHTML = html;
 
-  // Resetar estado do modal antes de abrir
-  const bodyEl = document.getElementById('modalUnidadeBody');
-  if (bodyEl) bodyEl.innerHTML = '<div style="padding:1rem;color:var(--text-dim);font-family:Arial,sans-serif;">Carregando...</div>';
   openModal('modalUnidade');
 
   // Adicionar eventos via JS
