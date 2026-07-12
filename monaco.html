@@ -3716,7 +3716,8 @@ async function extrairBoleto() {
 // MEDIÇÕES DE PRESTADOR MELHORADAS + RECIBO
 // ============================================================
 async function abrirModalMedicaoCompleta(prestadorId, prestadorNome) {
-  document.getElementById('medPrestadorId').value = prestadorId;
+  const _elMedId = document.getElementById('medPrestadorId');
+  if (_elMedId) _elMedId.value = prestadorId;
   document.getElementById('modalMedicaoTitle').textContent = 'Nova medição — ' + prestadorNome;
 
   // Carregar serviços do prestador
@@ -4141,9 +4142,12 @@ async function abrirDetalhePrestador(prestadorId, nome) {
       sbClient.from('prestador_medicoes').select('*, prestador_servicos(descricao,unidade)').eq('prestador_id', prestadorId).order('mes_referencia', {ascending:false})
     ]);
 
-    document.getElementById('medPrestadorId').value = prestadorId;
-    document.getElementById('svcPrestadorId').value = prestadorId;
-    document.getElementById('modalServicoTitle').textContent = 'Novo serviço — ' + nome;
+    const elMed = document.getElementById('medPrestadorId');
+    const elSvc = document.getElementById('svcPrestadorId');
+    const elSvcTitle = document.getElementById('modalServicoTitle');
+    if (elMed) elMed.value = prestadorId;
+    if (elSvc) elSvc.value = prestadorId;
+    if (elSvcTitle) elSvcTitle.textContent = 'Novo serviço — ' + nome;
 
     const medCls = {aberta:'badge-gray', aprovada:'badge-warn', paga:'badge-ok'};
     const medLbl = {aberta:'Aberta', aprovada:'Aprovada', paga:'Paga'};
