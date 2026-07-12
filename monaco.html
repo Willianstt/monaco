@@ -3541,7 +3541,9 @@ async function salvarPrestador() {
     email: document.getElementById('prestEmail').value,
     status: document.getElementById('prestStatus').value || 'ativo'
   };
-  const { error } = await sbClient.from('prestadores').insert(payload);
+  console.log('Salvando prestador:', payload);
+  const { data: prestData, error } = await sbClient.from('prestadores').insert(payload).select().single();
+  console.log('Resultado prestador:', prestData, error);
   if (error) { showToast('Erro: '+error.message,'err'); return; }
   closeModal('modalPrestador');
   showToast('Prestador salvo!','ok');
@@ -3549,7 +3551,8 @@ async function salvarPrestador() {
 }
 
 async function loadPrestadores() {
-  const { data: prestadores } = await sbClient.from('prestadores').select('*').order('nome');
+  const { data: prestadores, error: errP } = await sbClient.from('prestadores').select('*').order('nome');
+  console.log('Prestadores:', prestadores, errP);
   _todosPrests = prestadores || [];
   const wrap = document.getElementById('prestadoresWrap');
   if (!wrap) return;
