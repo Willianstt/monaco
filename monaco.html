@@ -4131,95 +4131,187 @@ boot();
 
 async function abrirDetalhePrestador(prestadorId, nome) {
   try {
-  const [{ data: servicos }, { data: medicoes }] = await Promise.all([
-    sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao'),
-    sbClient.from('prestador_medicoes').select('*, prestador_servicos(descricao,unidade)').eq('prestador_id', prestadorId).order('mes_referencia',{ascending:false}).limit(20)
-  ]);
-  document.getElementById('medPrestadorId').value = prestadorId;
-  document.getElementById('svcPrestadorId').value = prestadorId;
-  document.getElementById('modalServicoTitle').textContent = 'Novo serviço — ' + nome;
-  document.getElementById('modalMedicaoTitle').textContent = 'Nova medição — ' + nome;
-  document.getElementById('modalUnidadeTitle').textContent = 'Prestador — ' + nome;
-  const body = document.getElementById('modalUnidadeBody');
-  const medCls = {aberta:'badge-gray',aprovada:'badge-warn',paga:'badge-ok'};
-  const medLbl = {aberta:'Aberta',aprovada:'Aprovada',paga:'Paga'};
-  const totalMed = (medicoes||[]).reduce((s,m)=>s+parseFloat(m.valor_total||0),0);
+    document.getElementById('modalUnidadeTitle').textContent = 'Prestador — ' + nome;
+    const body = document.getElementById('modalUnidadeBody');
+    body.innerHTML = '<div style="padding:1rem;color:var(--text-dim);font-family:Arial,sans-serif;font-size:13px;">Carregando...</div>';
+    openModal('modalUnidade');
 
-  // Montar HTML via string (sem template literals aninhados)
-  let html = '<div style="padding:1rem;">';
-  // Serviços
-  html += '<div style="margin-bottom:1rem;">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">';
-  html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Tabela de serviços</div>';
-  html += '<button class="btn btn-sm" id="btnNovoServico"><i class="ti ti-plus"></i> Novo serviço</button>';
-  html += '</div>';
-  if ((servicos||[]).length === 0) {
-    html += '<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhum serviço cadastrado.</div>';
-  } else {
-    html += '<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">';
-    html += '<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">';
-    html += '<thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Unidade</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor unit.</th></tr></thead><tbody>';
-    (servicos||[]).forEach(s => {
-      html += '<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);">';
-      html += '<td style="padding:8px 12px;color:var(--text-muted);">'+s.descricao+'</td>';
-      html += '<td style="padding:8px 12px;color:var(--text-dim);">'+s.unidade+'</td>';
-      html += '<td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ '+parseFloat(s.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>';
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-  html += '</div>';
-  // Medições
-  html += '<div>';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">';
-  html += '<div style="font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;">Medições · Total: R$ '+totalMed.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</div>';
-  html += '<button class="btn btn-sm" id="btnNovaMedicao"><i class="ti ti-plus"></i> Nova medição</button>';
-  html += '</div>';
-  if ((medicoes||[]).length === 0) {
-    html += '<div style="font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;">Nenhuma medição registrada.</div>';
-  } else {
-    html += '<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">';
-    html += '<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">';
-    html += '<thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Mês</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Status</th></tr></thead><tbody>';
+    const [{ data: servicos }, { data: medicoes }] = await Promise.all([
+      sbClient.from('prestador_servicos').select('*').eq('prestador_id', prestadorId).order('descricao'),
+      sbClient.from('prestador_medicoes').select('*, prestador_servicos(descricao,unidade)').eq('prestador_id', prestadorId).order('mes_referencia', {ascending:false})
+    ]);
+
+    document.getElementById('medPrestadorId').value = prestadorId;
+    document.getElementById('svcPrestadorId').value = prestadorId;
+    document.getElementById('modalServicoTitle').textContent = 'Novo serviço — ' + nome;
+
+    const medCls = {aberta:'badge-gray', aprovada:'badge-warn', paga:'badge-ok'};
+    const medLbl = {aberta:'Aberta', aprovada:'Aprovada', paga:'Paga'};
+
+    // Agrupar medições por mês
+    const medPorMes = {};
     (medicoes||[]).forEach(m => {
-      html += '<tr style="border-bottom:0.5px solid rgba(201,168,76,0.06);">';
-      html += '<td style="padding:8px 12px;color:var(--text-muted);">'+m.mes_referencia+'</td>';
-      html += '<td style="padding:8px 12px;color:var(--text-muted);">'+(m.prestador_servicos&&m.prestador_servicos.descricao?m.prestador_servicos.descricao:'—')+'</td>';
-      html += '<td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ '+parseFloat(m.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>';
-      html += '<td style="padding:8px 12px;"><span class="status-badge '+(medCls[m.status]||'badge-gray')+'">'+(medLbl[m.status]||m.status)+'</span></td>';
-      html += '<td style="padding:4px 8px;" data-mes="'+m.mes_referencia+'" data-st="'+(m.status||'aberta')+'" class="td-edit-med"></td>';
-      html += '</tr>';
+      if (!medPorMes[m.mes_referencia]) medPorMes[m.mes_referencia] = [];
+      medPorMes[m.mes_referencia].push(m);
     });
-    html += '</tbody></table></div>';
-  }
-  html += '</div></div>';
-  body.innerHTML = html;
+    const meses = Object.keys(medPorMes).sort().reverse();
+    const totalGeral = (medicoes||[]).reduce((s,m) => s + parseFloat(m.valor_total||0), 0);
 
-  openModal('modalUnidade');
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'padding:1rem;';
 
-  // Adicionar eventos via JS
-  const btnSvc = document.getElementById('btnNovoServico');
-  if (btnSvc) btnSvc.addEventListener('click', () => openModal('modalServicoPrestador'));
+    // --- SERVIÇOS ---
+    const secSvc = document.createElement('div');
+    secSvc.style.cssText = 'margin-bottom:1.5rem;';
+    const hdrSvc = document.createElement('div');
+    hdrSvc.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;';
+    const lblSvc = document.createElement('div');
+    lblSvc.style.cssText = 'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;';
+    lblSvc.textContent = 'Tabela de serviços';
+    const btnNSvc = document.createElement('button');
+    btnNSvc.className = 'btn btn-sm';
+    btnNSvc.innerHTML = '<i class="ti ti-plus"></i> Novo serviço';
+    btnNSvc.addEventListener('click', () => openModal('modalServicoPrestador'));
+    hdrSvc.appendChild(lblSvc);
+    hdrSvc.appendChild(btnNSvc);
+    secSvc.appendChild(hdrSvc);
 
-  // Adicionar botões editar nas medições
-  document.querySelectorAll('.td-edit-med').forEach(td => {
-    const mes = td.dataset.mes;
-    const st = td.dataset.st;
-    const btnEd = document.createElement('button');
-    btnEd.className = 'btn btn-sm';
-    btnEd.style.cssText = 'font-size:11px;padding:3px 8px;';
-    btnEd.textContent = 'Editar';
-    btnEd.addEventListener('click', () => editarMedicao(prestadorId, nome, mes, st));
-    td.appendChild(btnEd);
-  });
+    if (!(servicos||[]).length) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;';
+      empty.textContent = 'Nenhum serviço cadastrado.';
+      secSvc.appendChild(empty);
+    } else {
+      const tbl = document.createElement('table');
+      tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;font-family:Arial,sans-serif;border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;';
+      tbl.innerHTML = '<thead><tr style="background:var(--surface2);"><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:8px 12px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Un.</th><th style="padding:8px 12px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor unit.</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+      servicos.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.style.cssText = 'border-bottom:0.5px solid rgba(201,168,76,0.06);';
+        tr.innerHTML = '<td style="padding:8px 12px;color:var(--text);">'+s.descricao+'</td><td style="padding:8px 12px;color:var(--text-dim);">'+s.unidade+'</td><td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ '+parseFloat(s.valor_unitario||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>';
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      secSvc.appendChild(tbl);
+    }
+    wrap.appendChild(secSvc);
 
-  const btnMed = document.getElementById('btnNovaMedicao');
-  if (btnMed) btnMed.addEventListener('click', () => {
-    abrirModalMedicaoCompleta(prestadorId, nome);
-  });
+    // --- MEDIÇÕES ---
+    const secMed = document.createElement('div');
+    const hdrMed = document.createElement('div');
+    hdrMed.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;';
+    const lblMed = document.createElement('div');
+    lblMed.style.cssText = 'font-size:11px;color:var(--text-dim);font-family:Arial,sans-serif;letter-spacing:0.1em;text-transform:uppercase;';
+    lblMed.innerHTML = 'Medições · Total: <span style="color:var(--gold);">R$ '+totalGeral.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>';
+    const btnNMed = document.createElement('button');
+    btnNMed.className = 'btn btn-primary btn-sm';
+    btnNMed.innerHTML = '<i class="ti ti-plus"></i> Nova medição';
+    btnNMed.addEventListener('click', () => abrirModalMedicaoCompleta(prestadorId, nome));
+    hdrMed.appendChild(lblMed);
+    hdrMed.appendChild(btnNMed);
+    secMed.appendChild(hdrMed);
+
+    if (!meses.length) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:12px;color:var(--text-dim);font-family:Arial,sans-serif;';
+      empty.textContent = 'Nenhuma medição registrada.';
+      secMed.appendChild(empty);
+    } else {
+      meses.forEach(mes => {
+        const itens = medPorMes[mes];
+        const totalMes = itens.reduce((s,m) => s+parseFloat(m.valor_total||0), 0);
+        const statusMes = itens[0]?.status || 'aberta';
+
+        const card = document.createElement('div');
+        card.style.cssText = 'border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden;';
+
+        // Header do mês
+        const cardHdr = document.createElement('div');
+        cardHdr.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);cursor:pointer;';
+
+        const mesLabel = document.createElement('div');
+        mesLabel.style.cssText = 'flex:1;font-size:13px;font-weight:500;color:var(--text);font-family:Arial,sans-serif;';
+        mesLabel.textContent = 'Medição ' + mes;
+
+        const totalEl = document.createElement('div');
+        totalEl.style.cssText = 'font-size:14px;font-weight:500;color:var(--gold);font-family:Arial,sans-serif;';
+        totalEl.textContent = 'R$ ' + totalMes.toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+        const badge = document.createElement('span');
+        badge.className = 'status-badge ' + (medCls[statusMes]||'badge-gray');
+        badge.textContent = medLbl[statusMes]||statusMes;
+
+        const btnEdMes = document.createElement('button');
+        btnEdMes.className = 'btn btn-sm';
+        btnEdMes.innerHTML = '<i class="ti ti-pencil"></i>';
+        btnEdMes.title = 'Editar medição';
+        btnEdMes.addEventListener('click', (e) => {
+          e.stopPropagation();
+          abrirModalMedicaoCompleta(prestadorId, nome, {mes_referencia: mes, status: statusMes, observacao: itens[0]?.observacao||''});
+        });
+
+        const btnDelMes = document.createElement('button');
+        btnDelMes.className = 'btn btn-danger btn-sm';
+        btnDelMes.innerHTML = '<i class="ti ti-trash"></i>';
+        btnDelMes.title = 'Excluir medição';
+        btnDelMes.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Excluir medição de ' + mes + '?')) return;
+          await sbClient.from('prestador_medicoes').delete().eq('prestador_id', prestadorId).eq('mes_referencia', mes);
+          showToast('Medição excluída.','ok');
+          abrirDetalhePrestador(prestadorId, nome);
+        });
+
+        const btnRec = document.createElement('button');
+        btnRec.className = 'btn btn-sm';
+        btnRec.innerHTML = '<i class="ti ti-receipt"></i>';
+        btnRec.title = 'Gerar recibo';
+        btnRec.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const svcIds = itens.map(i => ({servico_id: i.servico_id, quantidade: i.quantidade, valor: i.valor_total}));
+          await gerarRecibo(prestadorId, nome, mes, totalMes, svcIds, itens[0]?.observacao||'');
+          setTimeout(() => abrirDetalhePrestador(prestadorId, nome), 500);
+        });
+
+        cardHdr.appendChild(mesLabel);
+        cardHdr.appendChild(totalEl);
+        cardHdr.appendChild(badge);
+        cardHdr.appendChild(btnEdMes);
+        cardHdr.appendChild(btnDelMes);
+        cardHdr.appendChild(btnRec);
+
+        // Conteúdo - itens da medição
+        const cardBody = document.createElement('div');
+        cardBody.style.cssText = 'padding:8px 14px;display:none;';
+
+        const tbl2 = document.createElement('table');
+        tbl2.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;font-family:Arial,sans-serif;';
+        let rowsHtml = '<thead><tr><th style="padding:4px 8px;text-align:left;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Serviço</th><th style="padding:4px 8px;text-align:center;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Qtd</th><th style="padding:4px 8px;text-align:right;font-size:10px;color:var(--text-dim);text-transform:uppercase;">Valor</th></tr></thead><tbody>';
+        itens.forEach(i => {
+          rowsHtml += '<tr><td style="padding:4px 8px;color:var(--text-muted);">'+(i.prestador_servicos?.descricao||'—')+'</td><td style="padding:4px 8px;text-align:center;color:var(--text-dim);">'+(i.quantidade||0)+' '+(i.prestador_servicos?.unidade||'')+'</td><td style="padding:4px 8px;text-align:right;color:var(--gold);">R$ '+parseFloat(i.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td></tr>';
+        });
+        rowsHtml += '</tbody>';
+        tbl2.innerHTML = rowsHtml;
+        cardBody.appendChild(tbl2);
+
+        // Toggle expand
+        cardHdr.addEventListener('click', () => {
+          cardBody.style.display = cardBody.style.display === 'none' ? 'block' : 'none';
+        });
+
+        card.appendChild(cardHdr);
+        card.appendChild(cardBody);
+        secMed.appendChild(card);
+      });
+    }
+    wrap.appendChild(secMed);
+    body.innerHTML = '';
+    body.appendChild(wrap);
+
   } catch(err) {
     console.error('Erro em abrirDetalhePrestador:', err);
-    showToast('Erro ao abrir detalhes: '+err.message, 'err');
+    showToast('Erro: '+err.message,'err');
   }
 }
 
