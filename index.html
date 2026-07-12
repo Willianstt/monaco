@@ -1212,7 +1212,12 @@ async function boot() {
   }
   document.getElementById('loadingOverlay').style.display = 'none';
   if (session && session.user) {
-    await loginSuccess(session.user);
+    try {
+      await loginSuccess(session.user);
+    } catch(e) {
+      console.error('Erro em loginSuccess:', e);
+      document.getElementById('loginScreen').style.display = 'flex';
+    }
   } else {
     document.getElementById('loginScreen').style.display = 'flex';
   }
@@ -1236,6 +1241,7 @@ async function doLogin() {
 }
 
 async function loginSuccess(user) {
+  console.log('loginSuccess iniciado para:', user.email);
   currentUser = user;
   console.log('Login OK, user:', user.id, 'sbClient:', !!sbClient);
   const { data: profile } = await sbClient.from('usuarios').select('*').eq('auth_id', user.id).single();
