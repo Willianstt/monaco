@@ -357,7 +357,7 @@ textarea.form-input{min-height:80px;resize:vertical;}
       <div class="page active" id="page-home">
         <div class="page-header">
           <div class="page-title">Mônaco <span>Residence</span></div>
-          <div class="page-subtitle">Av. Nereu Ramos, 1271 · Chapecó, SC · 60 unidades · 21 andares</div>
+          <div class="page-subtitle">Sistema de gestão da obra</div>
         </div>
         <div class="gold-divider"></div>
         <div style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--text-dim);margin-bottom:1rem;font-family:Arial,sans-serif;">Módulos do sistema</div>
@@ -1548,7 +1548,15 @@ async function salvarCliente() {
     const entradaRS = entrada * fator;
     const vlrParcela = parseFloat((saldo/numParcelas).toFixed(2));
     console.log('CUB:', cubAtual, 'usaCUB:', usaCUB, 'saldoCUB:', saldoCUB, 'parcelaRS:', vlrParcela);
-    await sbClient.from('financeiro_unidade').insert({ unidade_id: unidadeId, valor_venda: valorVendaRS, entrada: entradaRS, num_parcelas: numParcelas, indexado_cub: usaCUB, valor_venda_cub: usaCUB?valorVenda:null, cub_base: usaCUB?cubAtual:null, saldo_devedor: saldo });
+    // Tentar inserir com campos CUB, se falhar inserir sem eles
+    let finErr = null;
+    const { error: e1 } = await sbClient.from('financeiro_unidade').insert({ unidade_id: unidadeId, valor_venda: valorVendaRS, entrada: entradaRS, num_parcelas: numParcelas, indexado_cub: usaCUB, valor_venda_cub: usaCUB?valorVenda:null, cub_base: usaCUB?cubAtual:null, saldo_devedor: saldo });
+    if (e1) {
+      console.log('Insert com CUB falhou, tentando sem:', e1.message);
+      const { error: e2 } = await sbClient.from('financeiro_unidade').insert({ unidade_id: unidadeId, valor_venda: valorVendaRS, entrada: entradaRS, num_parcelas: numParcelas, saldo_devedor: saldo });
+      finErr = e2;
+    }
+    if (finErr) { console.error('Erro ao salvar financeiro:', finErr); }
     const parcelas = [];
     const base = new Date(primVenc+'T12:00:00');
     for (let i = 0; i < numParcelas; i++) {
@@ -3823,9 +3831,11 @@ async function salvarMedicaoCompleta(prestadorId, prestadorNome) {
     const btnSim = document.createElement('button');
     btnSim.className = 'btn btn-primary btn-sm';
     btnSim.textContent = 'Gerar recibo';
-    btnSim.addEventListener('click', () => {
+    btnSim.addEventListener('click', async () => {
       document.body.removeChild(toastEl);
-      gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs);
+      await gerarRecibo(prestadorId, prestadorNome, mes, total, servicos, obs);
+      // Reabrir detalhes após gerar recibo
+      setTimeout(() => abrirDetalhePrestador(prestadorId, prestadorNome), 300);
     });
     const btnNao = document.createElement('button');
     btnNao.className = 'btn btn-sm';
@@ -4132,6 +4142,7 @@ async function abrirDetalhePrestador(prestadorId, nome) {
       html += '<td style="padding:8px 12px;color:var(--text-muted);">'+(m.prestador_servicos&&m.prestador_servicos.descricao?m.prestador_servicos.descricao:'—')+'</td>';
       html += '<td style="padding:8px 12px;text-align:right;color:var(--gold);">R$ '+parseFloat(m.valor_total||0).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</td>';
       html += '<td style="padding:8px 12px;"><span class="status-badge '+(medCls[m.status]||'badge-gray')+'">'+(medLbl[m.status]||m.status)+'</span></td>';
+      html += '<td style="padding:4px 8px;" data-mes="'+m.mes_referencia+'" data-st="'+(m.status||'aberta')+'" class="td-edit-med"></td>';
       html += '</tr>';
     });
     html += '</tbody></table></div>';
@@ -4144,6 +4155,18 @@ async function abrirDetalhePrestador(prestadorId, nome) {
   // Adicionar eventos via JS
   const btnSvc = document.getElementById('btnNovoServico');
   if (btnSvc) btnSvc.addEventListener('click', () => openModal('modalServicoPrestador'));
+
+  // Adicionar botões editar nas medições
+  document.querySelectorAll('.td-edit-med').forEach(td => {
+    const mes = td.dataset.mes;
+    const st = td.dataset.st;
+    const btnEd = document.createElement('button');
+    btnEd.className = 'btn btn-sm';
+    btnEd.style.cssText = 'font-size:11px;padding:3px 8px;';
+    btnEd.textContent = 'Editar';
+    btnEd.addEventListener('click', () => editarMedicao(prestadorId, nome, mes, st));
+    td.appendChild(btnEd);
+  });
 
   const btnMed = document.getElementById('btnNovaMedicao');
   if (btnMed) btnMed.addEventListener('click', () => {
